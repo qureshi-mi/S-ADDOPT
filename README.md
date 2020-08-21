@@ -1,4 +1,4 @@
-# SADDOPT
+# S-ADDOPT
 The code demonstrates the performance of SADDOPT with other comparable algorithms over directed graphs including GP, SGP, ADDOPT and SADDOPT presented in the paper: "https://arxiv.org/abs/2005.07785". We include the experiments for classification using logistic regression and neural networks. 
 
 ## Dependencies and Setup
