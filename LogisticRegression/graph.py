@@ -9,6 +9,38 @@ from numpy import linalg as LA
 import math
 
 """
+The class of grid graph: undirected
+One node at maximum will connect to four nodes around it
+"""
+class Grid_graph:
+    def __init__(self,number_of_nodes, k):
+        self.size = number_of_nodes     # note that number of nodes = k**2
+        self.k = k
+    
+    def undirected(self):
+        U = np.zeros( (self.size,self.size) )
+        for i in range( self.size ):
+            print(f"{i} {self.k}")
+            U[i][i] = 1
+
+            residual = i % self.k
+            if residual != self.k - 1:
+                U[i][i + 1] = 1
+                U[i + 1][i] = 1
+            if residual != 0:
+                U[i][i - 1] = 1
+                U[i - 1][i] = 1
+
+            if i - self.k >= 0:
+                U[i][i - self.k] = 1
+                U[i - self.k][i] = 1
+            if i + self.k < self.size:
+                U[i][i + self.k] = 1
+                U[i + self.k][i] = 1
+
+        return U
+
+"""
 The class of geometric graph: undirected and directed
 Two nodes are connected if they are in physical proximity
 """
