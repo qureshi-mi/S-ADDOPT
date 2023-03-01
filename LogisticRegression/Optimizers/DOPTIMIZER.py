@@ -7,6 +7,71 @@ import copy as cp
 import utilities as ut
 from numpy import linalg as LA
 
+
+
+def D_SGD(prd, weight, learning_rate, K, theta_0, batch_size):
+    theta = cp.deepcopy( theta_0 )
+    theta_epoch = [ cp.deepcopy(theta) ]
+    sample_vec = np.array([np.random.choice(prd.data_distr[i]) for i in range(prd.n)])
+    grad = prd.networkgrad( theta, sample_vec )
+    for k in range(K):
+        theta = np.matmul( weight, theta ) - learning_rate * grad  
+
+        sample_vec = np.array([np.random.choice(prd.data_distr[i]) for i in range(prd.n)])
+        grad = prd.networkgrad( theta, sample_vec )
+
+        ut.monitor('SADDOPT', k, K)
+        if (k+1) % prd.b == 0:
+            theta_epoch.append( cp.deepcopy(theta) )
+
+    return theta_epoch
+    
+
+
+    theta_copy = cp.deepcopy( theta_0 )
+    theta = [theta_copy]  
+
+
+    for k in range(K):                      # TODO: each k here is actually one batch ... 
+        batch_idx = np.random.choice(prd.N - batch_size + 1)
+        theta.append( 
+            theta[-1] - learning_rate * prd.grad(
+                theta[-1], batch_idx = (batch_idx, batch_idx + batch_size)
+            ) 
+        )
+        ut.monitor('CGD',k,K)
+    theta_opt = theta[-1]
+    F_opt = prd.F_val(theta[-1])
+    return theta, theta_opt, F_opt
+
+def D_RR():
+    pass
+
+def DPG_RR():
+    pass
+
+
+def SADDOPT(prd,B1,B2,learning_rate,K,theta_0):   
+    theta = cp.deepcopy( theta_0 )
+    theta_epoch = [ cp.deepcopy(theta) ]
+    sample_vec = np.array([np.random.choice(prd.data_distr[i]) for i in range(prd.n)])
+    grad = prd.networkgrad( theta, sample_vec )
+    tracker = cp.deepcopy(grad)
+    Y = np.ones(B1.shape[1])
+    for k in range(K):
+        theta = np.matmul( B1, theta ) - learning_rate * tracker  
+        grad_last = cp.deepcopy(grad)
+        Y = np.matmul( B1, Y )
+        YY = np.diag(Y)
+        z = np.matmul( LA.inv(YY), theta )
+        sample_vec = np.array([np.random.choice(prd.data_distr[i]) for i in range(prd.n)])
+        grad = prd.networkgrad( z, sample_vec )
+        tracker = np.matmul( B2, tracker ) + grad - grad_last
+        ut.monitor('SADDOPT', k, K)
+        if (k+1) % prd.b == 0:
+            theta_epoch.append( cp.deepcopy(theta) )
+    return theta_epoch
+
 def GP(prd,B,learning_rate,K,theta_0):
     theta = [cp.deepcopy( theta_0 )]
     grad = prd.networkgrad( theta[-1] )
@@ -54,23 +119,3 @@ def SGP(prd,B,learning_rate,K,theta_0):
             theta_epoch.append( cp.deepcopy(theta) )
     return theta_epoch
 
-def SADDOPT(prd,B1,B2,learning_rate,K,theta_0):   
-    theta = cp.deepcopy( theta_0 )
-    theta_epoch = [ cp.deepcopy(theta) ]
-    sample_vec = np.array([np.random.choice(prd.data_distr[i]) for i in range(prd.n)])
-    grad = prd.networkgrad( theta, sample_vec )
-    tracker = cp.deepcopy(grad)
-    Y = np.ones(B1.shape[1])
-    for k in range(K):
-        theta = np.matmul( B1, theta ) - learning_rate * tracker  
-        grad_last = cp.deepcopy(grad)
-        Y = np.matmul( B1, Y )
-        YY = np.diag(Y)
-        z = np.matmul( LA.inv(YY), theta )
-        sample_vec = np.array([np.random.choice(prd.data_distr[i]) for i in range(prd.n)])
-        grad = prd.networkgrad( z, sample_vec )
-        tracker = np.matmul( B2, tracker ) + grad - grad_last
-        ut.monitor('SADDOPT', k, K)
-        if (k+1) % prd.b == 0:
-            theta_epoch.append( cp.deepcopy(theta) )
-    return theta_epoch

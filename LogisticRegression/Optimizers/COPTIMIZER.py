@@ -6,9 +6,50 @@ import numpy as np
 import copy as cp
 import utilities as ut
 
+def SGD(pr, learning_rate, K, theta_0, batch_size):
+    theta_copy = cp.deepcopy( theta_0 )
+    theta = [theta_copy]  
+
+    update_round = pr.N / batch_size        # in order to line up with RR case
+
+    for k in range(K):                      # TODO: each k here is actually one batch ... 
+        batch_idx = np.random.choice(pr.N - batch_size + 1)
+        theta.append( 
+            theta[-1] - learning_rate * pr.grad(
+                theta[-1], batch_idx = (batch_idx, batch_idx + batch_size)
+            ) 
+        )
+        ut.monitor('CGD',k,K)
+    theta_opt = theta[-1]
+    F_opt = pr.F_val(theta[-1])
+    return theta, theta_opt, F_opt
+
+def C_RR(pr, learning_rate, K, theta_0, batch_size):
+    theta_copy = cp.deepcopy( theta_0 )
+    theta = [theta_copy]  
+    
+    cnt = pr.N
+    for k in range(K):
+        cnt = cnt + batch_size
+        if cnt >= pr.N:
+            cnt = 0
+            permutation = np.random.permutation(pr.N)
+        
+        theta.append( 
+            theta[-1] - learning_rate * pr.grad(
+                theta[-1], permute = permutation[cnt:cnt + batch_size]
+            ) 
+        )
+        ut.monitor('CGD',k,K)
+        
+    theta_opt = theta[-1]
+    F_opt = pr.F_val(theta[-1])
+    return theta, theta_opt, F_opt
+
 ## Centralized gradient descent
 def CGD(pr,learning_rate,K,theta_0):
-    theta = [theta_0]  
+    theta_copy = cp.deepcopy( theta_0 )
+    theta = [theta_copy]  
     for k in range(K):
         theta.append( theta[-1] - learning_rate * pr.grad(theta[-1]) )
         ut.monitor('CGD',k,K)

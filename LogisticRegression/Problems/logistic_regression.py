@@ -8,6 +8,8 @@ import numpy as np
 from numpy import linalg as LA
 import os
 import sys
+import copy as cp
+
 
 class LR_L2( object ):
     def __init__(self, n_agent, class1 = 2, class2 = 6, train = 12000, balanced = True, limited_labels = False ):
@@ -20,7 +22,11 @@ class LR_L2( object ):
         self.X_train, self.Y_train, self.X_test, self.Y_test = self.load_data()
         self.N = len(self.X_train)            ## total number of data samples
         if balanced == False:
-            self.split_vec = np.sort(np.random.choice(np.arange(1,self.N),self.n-1, replace = False )) 
+            self.split_vec = np.sort(
+                np.random.choice(
+                    np.arange(1, self.N), self.n-1, replace = False 
+                )
+        ) 
         self.X, self.Y, self.data_distr = self.distribute_data()
         self.p = len(self.X_train[0])         ## dimension of the feature 
         self.reg = 1/self.N
@@ -97,7 +103,18 @@ class LR_L2( object ):
             return f_val/self.n + reg_val
             
         
-    def localgrad(self, theta, idx, j = None ):  ## idx is the node index, j is local sample index
+    def localgrad(self, theta, idx, j = None, batch_idx = None ):  ## idx is the node index, j is local sample index
+        if batch_idx != None:
+            start, end = batch_idx[0], batch_idx[1]
+            temp1 = np.exp( 
+                np.matmul(
+                    self.X[idx][start:end],theta[idx]
+                ) * (-self.Y[idx][start:end])  
+            )
+            temp2 = ( temp1/(temp1+1) ) * (-self.Y[idx][start:end])
+            grad = self.X[idx][start:end] * temp2[:,np.newaxis]
+            return np.sum(grad, axis = 0) / (end-start) + self.reg * theta[idx]
+        
         if j == None:                 ## local full batch gradient
             temp1 = np.exp( np.matmul(self.X[idx],theta[idx]) * (-self.Y[idx])  )
             temp2 = ( temp1/(temp1+1) ) * (-self.Y[idx])
@@ -105,14 +122,18 @@ class LR_L2( object ):
             return np.sum(grad, axis = 0)/self.data_distr[idx] + self.reg * theta[idx]
         else:                         ## local stochastic gradient  
             temp = np.exp(self.Y[idx][j]*np.inner(self.X[idx][j], theta[idx]))
-            grad_lr = -self.Y[idx][j]/(1+temp) * self.X[idx][j]
+            grad_lr = -self.Y[idx][j]/(1+temp) * self.X[idx][j]                         # TODO: I highly suspect they are missing a <code>temp</code> here. But since sigmoid's range is [0,1]. Missing might not cause a big problem
             grad_reg = self.reg * theta[idx]
             grad = grad_lr + grad_reg
             return grad
         
-    def networkgrad(self, theta, idxv = None):  ## network stochastic/batch gradient
+    def networkgrad(self, theta, idxv = None, batch_idx = None):  ## network stochastic/batch/mini-batch gradient
         grad = np.zeros( (self.n,self.p) )
-        if idxv is None:                        ## full batch
+        if batch_idx != None:
+            for i in range(self.n):
+                grad[i] = self.localgrad(theta , i, batch_idx = batch_idx)
+            return grad
+        elif idxv is None:                        ## full batch
             for i in range(self.n):
                 grad[i] = self.localgrad(theta , i)
             return grad
@@ -121,14 +142,35 @@ class LR_L2( object ):
                 grad[i] = self.localgrad(theta, i, idxv[i])
             return grad
     
-    def grad(self, theta, idx = None): ## centralized stochastic/batch gradient
+    def grad(self, theta, idx = None, batch_idx = None, permute = None): ## centralized stochastic/batch gradient
+
+        if batch_idx != None:
+            assert permute == None
+            start, end = batch_idx[0], batch_idx[1]
+            temp1 = np.exp( 
+                np.matmul(self.X_train[start:end], theta) * (-self.Y_train[start:end])  
+            )
+            temp2 = ( temp1/(temp1+1) ) * (-self.Y_train[start:end])
+            grad = self.X_train[start:end] * temp2[:,np.newaxis]
+
+            return np.sum(grad, axis = 0)/(end - start) + self.reg * theta
+        if permute != None:
+            assert batch_idx == None
+            temp1 = np.exp( 
+                np.matmul(self.X_train[permute], theta) * (-self.Y_train[permute])  
+            )
+            temp2 = ( temp1/(temp1+1) ) * (-self.Y_train[permute])
+            grad = self.X_train[permute] * temp2[:,np.newaxis]
+
+            return np.sum(grad, axis = 0) / len(permute) + self.reg * theta
+
         if idx == None:                ## full batch
             if self.balanced == True:
                 temp1 = np.exp( np.matmul(self.X_train,theta) * (-self.Y_train)  )
                 temp2 = ( temp1/(temp1+1) ) * (-self.Y_train)
                 grad = self.X_train * temp2[:,np.newaxis]
                 return np.sum(grad, axis = 0)/self.N + self.reg * theta
-            if self.balanced == False:
+            if self.balanced == False:                                          # TODO: how could contralized gradient be imbalanced??？
                 return np.sum( self.networkgrad(np.tile(theta,(self.n,1)))\
                               , axis = 0 )/self.n
         else:
