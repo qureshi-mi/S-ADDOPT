@@ -27,6 +27,9 @@ class LR_L2( object ):
                     np.arange(1, self.N), self.n-1, replace = False 
                 )
         ) 
+            
+        self.noniid = True
+
         self.X, self.Y, self.data_distr = self.distribute_data()
         self.p = len(self.X_train[0])         ## dimension of the feature 
         self.reg = 1/self.N
@@ -71,6 +74,11 @@ class LR_L2( object ):
     
     def distribute_data(self):
         if self.balanced == True:
+           if self.noniid:
+               idx = np.argsort(Y)
+               X = X[idx]
+               Y = Y[idx]
+            
            X = np.array( np.split( self.X_train, self.n, axis = 0 ) ) 
            Y = np.array( np.split( self.Y_train, self.n, axis = 0 ) ) 
         if self.balanced == False:   ## random distribution
@@ -103,8 +111,9 @@ class LR_L2( object ):
             return f_val/self.n + reg_val
             
         
-    def localgrad(self, theta, idx, j = None, batch_idx = None ):  ## idx is the node index, j is local sample index
+    def localgrad(self, theta, idx, j = None, batch_idx = None, permute = None ):  ## idx is the node index, j is local sample index
         if batch_idx != None:
+            assert permute == None
             start, end = batch_idx[0], batch_idx[1]
             temp1 = np.exp( 
                 np.matmul(
@@ -114,6 +123,16 @@ class LR_L2( object ):
             temp2 = ( temp1/(temp1+1) ) * (-self.Y[idx][start:end])
             grad = self.X[idx][start:end] * temp2[:,np.newaxis]
             return np.sum(grad, axis = 0) / (end-start) + self.reg * theta[idx]
+        
+        if permute != None:
+            assert batch_idx == None
+            temp1 = np.exp( 
+                np.matmul(self.X_train[permute], theta) * (-self.Y_train[permute])  
+            )
+            temp2 = ( temp1/(temp1+1) ) * (-self.Y_train[permute])
+            grad = self.X_train[permute] * temp2[:,np.newaxis]
+
+            return np.sum(grad, axis = 0) / len(permute) + self.reg * theta
         
         if j == None:                 ## local full batch gradient
             temp1 = np.exp( np.matmul(self.X[idx],theta[idx]) * (-self.Y[idx])  )
@@ -127,12 +146,19 @@ class LR_L2( object ):
             grad = grad_lr + grad_reg
             return grad
         
-    def networkgrad(self, theta, idxv = None, batch_idx = None):  ## network stochastic/batch/mini-batch gradient
+    def networkgrad(self, theta, idxv = None, batch_idx = None, permute = None):  ## network stochastic/batch/mini-batch gradient
         grad = np.zeros( (self.n,self.p) )
         if batch_idx != None:
+            assert permute == None
             for i in range(self.n):
-                grad[i] = self.localgrad(theta , i, batch_idx = batch_idx)
+                grad[i] = self.localgrad(theta , i, batch_idx = batch_idx[i])
             return grad
+
+        elif permute != None:
+            for i in range(self.n):
+                grad[i] = self.localgrad(theta , i, permute = permute[i])
+            return grad
+        
         elif idxv is None:                        ## full batch
             for i in range(self.n):
                 grad[i] = self.localgrad(theta , i)

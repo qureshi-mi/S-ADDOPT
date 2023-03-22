@@ -19,7 +19,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size):
                 theta[-1], batch_idx = (batch_idx, batch_idx + batch_size)
             ) 
         )
-        ut.monitor('CGD',k,K)
+        ut.monitor('SGD',k,K)
     theta_opt = theta[-1]
     F_opt = pr.F_val(theta[-1])
     return theta, theta_opt, F_opt
@@ -40,7 +40,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size):
                 theta[-1], permute = permutation[cnt:cnt + batch_size]
             ) 
         )
-        ut.monitor('CGD',k,K)
+        ut.monitor('C_RR',k,K)
         
     theta_opt = theta[-1]
     F_opt = pr.F_val(theta[-1])

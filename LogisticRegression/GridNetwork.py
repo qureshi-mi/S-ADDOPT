@@ -6,7 +6,7 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
-from graph import Weight_matrix, Geometric_graph, Exponential_graph
+from graph import Weight_matrix, Geometric_graph, Exponential_graph, Grid_graph
 from analysis import error
 from Problems.logistic_regression import LR_L2
 from Problems.log_reg_cifar import LR_L4
@@ -31,18 +31,18 @@ CEPOCH_base = 3000
 depoch = 100
 theta_c0 = np.random.normal(0,1,p)
 theta_0 = np.random.normal(0,1,(n,p)) 
-UG = Exponential_graph(n).directed()
+UG = Grid_graph(n).undirected()
 B = Weight_matrix(UG).column_stochastic()
 """
 Centralized solutions
 """
 ## solve the optimal solution of Logistic regression
-_, theta_opt, F_opt = copt.CGD(lr_0,10*1/L, CEPOCH_base,theta_c0) 
+_, theta_opt, F_opt = copt.CGD(lr_0, 10*1/L, CEPOCH_base, theta_c0) 
 error_lr_0 = error(lr_0,theta_opt,F_opt)
 
 """
 Decentralized Algorithms
 """
-## GP
+## SGD
 theta_GP = dopt.SGD()
 res_F_GP = error_lr_0.cost_gap_path( np.sum(theta_GP,axis = 1)/n)
