@@ -13,7 +13,7 @@ The class of grid graph: undirected
 One node at maximum will connect to four nodes around it
 """
 class Grid_graph:
-    def __init__(self,number_of_nodes, k):
+    def __init__(self, number_of_nodes, k):
         self.size = number_of_nodes     # note that number of nodes = k**2
         self.k = k
     

@@ -6,32 +6,44 @@ import numpy as np
 import copy as cp
 import utilities as ut
 from numpy import linalg as LA
+import time
+import math
 
 
-
-def D_SGD(prd, weight, learning_rate, K, theta_0, batch_size):
+def D_SGD(prd, weight, learning_rate, K, theta_0, batch_size, comm_round):
     theta = cp.deepcopy( theta_0 )
     theta_epoch = [ cp.deepcopy(theta) ]
 
+    update_round = math.ceil(len(prd.X[0]) / batch_size)
+    start = time.time()
+
     for k in range(K):
-        sample_vec = [np.random.choice(prd.data_distr[i]) for i in range(prd.n)]
-        sample_vec = [
-            (
-                val, max(val + batch_size, prd.data_distr[i])   # tuple of index for training batch i -> from index val to index val + batch size
-            ) for i, val in enumerate(sample_vec)
-        ]
-        grad = prd.networkgrad( theta, batch_idx = sample_vec )
+        for i in range(update_round):
 
-        theta = np.matmul( weight, theta ) - learning_rate * grad  
+            sample_vec = [np.random.choice(prd.data_distr[i]) for i in range(prd.n)]
+            sample_vec = [
+                (
+                    val, max(val + batch_size, prd.data_distr[i])   # tuple of index for training batch i -> from index val to index val + batch size
+                ) for i, val in enumerate(sample_vec)
+            ]
+            grad = prd.networkgrad( theta, batch_idx = sample_vec )
 
+            theta = theta - learning_rate * grad  
+            if i % comm_round == 0:
+                # averaging from neighbours
+                theta = np.matmul( weight, theta )
+
+        
         ut.monitor('D_SGD', k, K)
-        if (k+1) % prd.b == 0:
-            theta_epoch.append( cp.deepcopy(theta) )
+        theta_epoch.append( cp.deepcopy(theta) )
+
+    print(f"{k} Round | {update_round}# Updates | {batch_size} Batch Size")
+    print(f"Time Span: {time.time() - start}")
 
     return theta_epoch
     
 
-def D_RR(prd, weight, learning_rate, K, theta_0, batch_size):
+def D_RR(prd, weight, learning_rate, K, theta_0, batch_size, comm_round):
     theta = cp.deepcopy( theta_0 )
     theta_epoch = [ cp.deepcopy(theta) ]
 
@@ -39,27 +51,34 @@ def D_RR(prd, weight, learning_rate, K, theta_0, batch_size):
     # slices = [0] * len(sample_vec)
     # grad = prd.networkgrad( theta, permute = sample_vec )
 
-    slices = [prd.data_distr[i] for i in range(prd.n)]
+    slices = [0 for i in range(prd.n)]
     sample_vec = [np.random.permutation(prd.data_distr[i]) for i in range(prd.n)]
+    start = time.time()
 
     for k in range(K):
-        permutes = []
-        for i, sequence in enumerate(sample_vec):
-            if slices[i] >= prd.data_distr[i]:
-                slices[i] = 0
-                sample_vec[i] = np.random.permutation(prd.data_distr[i])
+        for i in range(prd.n):
+            # print(f"check {slices[i]} >= {prd.data_distr[i]}")
+            slices[i] = 0
+            sample_vec[i] = np.random.permutation(prd.data_distr[i])
 
-            permutes.append(sequence[slices[i]:slices[i] + batch_size])         # same batch size across all clients TODO: is this good?
-            slices[i]+=batch_size
+        while slices[0] <= prd.data_distr[0]:
+            permutes = []
+            for i, sequence in enumerate(sample_vec):
+                permutes.append(sequence[slices[i]:slices[i] + batch_size])         # same batch size across all clients TODO: is this good?
+                slices[i] += batch_size
+            
+            grad = prd.networkgrad( theta, permute = permutes, permute_flag=True )
 
-        grad = prd.networkgrad( theta, permute = permutes )
-
-        theta = np.matmul( weight, theta ) - learning_rate * grad  
+            theta = theta - learning_rate * grad  
+            if i % comm_round == 0:
+            # averaging from neighbours
+                theta = np.matmul( weight, theta )
 
         ut.monitor('D_RR', k, K)
-        if (k+1) % prd.b == 0:
-            theta_epoch.append( cp.deepcopy(theta) )
+        theta_epoch.append( cp.deepcopy(theta) )
 
+    print(f"{k} Round | {slices[0]}# Updates | {batch_size} Batch Size")
+    print(f"Time Span: {time.time() - start}")
     return theta_epoch
 
 def DPG_RR():
