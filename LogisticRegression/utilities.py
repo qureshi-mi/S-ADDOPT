@@ -17,3 +17,40 @@ def nx_options():
      'arrows': False,
      'node_shape': 'o',}
     return options
+
+def save_npy(npys, root_path, exp_name):
+    import numpy as np
+
+    print("saving experiment results...")
+    for i, array in enumerate(npys):
+        np.save(
+            f"{root_path[i]}/{exp_name[i]}.npy", array
+        )
+
+def plot_figure(
+    data, mark, legend, save_path
+):
+    import matplotlib.pyplot as plt
+    from matplotlib.font_manager import FontProperties
+
+    print("plotting the figure...")
+    
+    mark_every = 100
+    font = FontProperties()
+    font.set_size(18)
+    font2 = FontProperties()
+    font2.set_size(10)
+    plt.figure(3)
+
+    for i, line in data:
+        plt.plot(line, mark[i], markevery = mark_every)
+
+    plt.legend(legend, prop=font2)
+    plt.grid(True)
+    plt.yscale('log')
+    plt.tick_params(labelsize='large', width=3)
+    plt.title('MNIST', fontproperties=font)
+    plt.xlabel('Epochs', fontproperties=font)
+    plt.ylabel('Optimality Gap', fontproperties=font)
+    plt.savefig(save_path, format = 'pdf', dpi = 4000, bbox_inches='tight')
+
