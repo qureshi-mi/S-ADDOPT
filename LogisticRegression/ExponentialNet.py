@@ -4,6 +4,7 @@
 
 ## Generates all the plots to compare different algorithms over Exponential directed graphs using logistic regression.
 
+import os
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -35,7 +36,7 @@ step_size = 1/L/2                                                 ## selecting a
 """
 Initializing variables
 """
-CEPOCH_base = 3000
+CEPOCH_base = 1000
 DEPOCH_base = 1000
 # depoch = 100
 
@@ -44,8 +45,6 @@ model_para_dis = np.random.normal(0,1,(node_num,dim))
 undir_graph = Exponential_graph(node_num).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
 
-# learning_rate = 1/1000
-# step_size = 1/1000
 ground_truth_lr = 10*1/L
 lr = 10*1/L     
 
@@ -53,6 +52,7 @@ line_formats = [
     '-vb', '-^m', '-dy', '-sr', "-1k", "-2g", "-3C", "-4w"
 ]
 exp_log_path = "/Users/ultrali/Documents/Experiments/DRR/sanity-check"
+plot_every = 10
 
 """
 Centralized solutions
@@ -65,36 +65,16 @@ error_lr_0 = error(
     logis_model, theta_opt, F_opt
 )
 
-# C_SGD sanity check using different batch sizes
-all_res_F_SGD = []
-batch_sizes = [2000, 3000, 4000, 6000, 12000]
-for bz in batch_sizes:
-    theta_SGD, theta_opt, F_opt = copt.SGD(
-        logis_model, lr, CEPOCH_base, model_para_central, bz
-    ) 
-    res_F_SGD = error_lr_0.cost_gap_path(theta_SGD)
-    all_res_F_SGD.append(res_F_SGD)
 
-exp_save_path = f"{exp_log_path}/central_SGD"
-save_npy(
-    all_res_F_SGD, exp_save_path,
-    [f"bz{bz}" for bz in batch_sizes]
-)
-plot_figure(
-    all_res_F_SGD, line_formats, 
-    [f"bz = {bz}" for bz in batch_sizes],
-    f"{exp_save_path}/convergence.pdf"
-)
 
-# theta_RR, theta_opt, F_opt = copt.C_RR(lr_0,10*1/L, CEPOCH_base,theta_c0, batch_size) 
-# res_F_RR = error_lr_0.cost_gap_path(theta_RR)
-
-# """
-# Decentralized Algorithms
-# """
-# ## SGD
-# theta_D_SGD = dopt.D_SGD(lr_0,B,step_size,int(DEPOCH_base), theta_0, batch_size)  
-# res_F_D_SGD = error_lr_0.cost_gap_path( np.sum(theta_D_SGD,axis = 1)/n)
+"""
+Decentralized Algorithms
+"""
+## SGD
+theta_D_SGD = dopt.D_SGD(
+    logis_model, B, step_size, int(DEPOCH_base), theta_0, batch_size
+)  
+res_F_D_SGD = error_lr_0.cost_gap_path( np.sum(theta_D_SGD,axis = 1)/n)
 
 # theta_D_RR = dopt.D_RR(lr_0,B,step_size,int(DEPOCH_base), theta_0, batch_size)  
 # res_F_D_RR = error_lr_0.cost_gap_path( np.sum(theta_D_RR,axis = 1)/n)

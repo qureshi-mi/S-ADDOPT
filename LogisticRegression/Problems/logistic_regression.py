@@ -43,6 +43,7 @@ class LR_L2( object ):
         self.dim = self.p                     ## dimension of the feature 
         self.L, self.kappa = self.smooth_scvx_parameters()
         self.b = int(self.N/self.n)           ## average local samples
+        print(f"L-smooth constant {self.L}")
 
     def load_data(self):
         if os.path.exists('mnist.npz'):

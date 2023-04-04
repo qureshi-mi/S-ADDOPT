@@ -92,7 +92,7 @@ plt.ylabel('Optimality Gap', fontproperties=font)
 plt.legend(('GP', 'ADDOPT', 'SGP', 'SADDOPT'), prop=font2)
 plt.savefig('plots/ExpMnist.pdf', format = 'pdf', dpi = 4000, bbox_inches='tight')
 plt.figure(2)
-G = nx.from_numpy_matrix(np.matrix(B), create_using=nx.DiGraph)
+G = nx.from_numpy_array(np.matrix(B), create_using=nx.DiGraph)
 layout = nx.circular_layout(G)
 nx.draw(G, layout)
 plt.savefig('plots/ExpGraph.pdf', format = 'pdf', dpi = 4000, pad_inches=0,\
@@ -102,74 +102,74 @@ plt.savefig('plots/ExpGraph.pdf', format = 'pdf', dpi = 4000, pad_inches=0,\
 ####--------------------------------------------CIFAR-10 Classification---------------------------------------------####
 ########################################################################################################################
 
-"""
-Data processing for CIFAR
-"""
-lr_1 = LR_L4(n, limited_labels = False, balanced = True )   ## instantiate the problem class 
-p = lr_1.p                                                  ## dimension of the model 
-L = lr_1.L                                                  ## L-smooth constant
-N = lr_1.N                                                  ## total number of training samples
-b = lr_1.b                                                  ## average number of local samples
-step_size = 1/L/2                                           ## selecting an appropriate step-size
+# """
+# Data processing for CIFAR
+# """
+# lr_1 = LR_L4(n, limited_labels = False, balanced = True )   ## instantiate the problem class 
+# p = lr_1.p                                                  ## dimension of the model 
+# L = lr_1.L                                                  ## L-smooth constant
+# N = lr_1.N                                                  ## total number of training samples
+# b = lr_1.b                                                  ## average number of local samples
+# step_size = 1/L/2                                           ## selecting an appropriate step-size
 
-"""
-Initializing variables
-"""
-CEPOCH_base = 5000
-depoch = 100
-theta_c0 = np.random.normal(0,1,p)
-theta_0 = np.random.normal(0,1,(n,p)) 
+# """
+# Initializing variables
+# """
+# CEPOCH_base = 5000
+# depoch = 100
+# theta_c0 = np.random.normal(0,1,p)
+# theta_0 = np.random.normal(0,1,(n,p)) 
 
-"""
-Centralized solutions
-"""
-## solve the optimal solution of Logistic regression
-_, theta_opt, F_opt = copt.CGD(lr_1,10*1/L, CEPOCH_base,theta_c0) 
-error_lr_1 = error(lr_1,theta_opt,F_opt)
+# """
+# Centralized solutions
+# """
+# ## solve the optimal solution of Logistic regression
+# _, theta_opt, F_opt = copt.CGD(lr_1,10*1/L, CEPOCH_base,theta_c0) 
+# error_lr_1 = error(lr_1,theta_opt,F_opt)
 
 
-"""
-Decentralized Algorithms
-"""
-## GP
-theta_GP = dopt.GP(lr_1,B,step_size,int( depoch),theta_0)  
-res_F_GP = error_lr_1.cost_gap_path( np.sum(theta_GP,axis = 1)/n)
-## ADDOPT
-theta_ADDOPT = dopt.ADDOPT(lr_1,B,B,step_size,int( depoch ),theta_0)  
-res_F_ADDOPT = error_lr_1.cost_gap_path( np.sum(theta_ADDOPT,axis = 1)/n)
-## SGP
-theta_SGP = dopt.SGP(lr_1,B,step_size,int( depoch*b),theta_0)  
-res_F_SGP = error_lr_1.cost_gap_path( np.sum(theta_SGP,axis = 1)/n)
-## SADDOPT               
-theta_SADDOPT = dopt.SADDOPT(lr_1,B,B,step_size,int( depoch*b),theta_0)  
-res_F_SADDOPT = error_lr_1.cost_gap_path( np.sum(theta_SADDOPT,axis = 1)/n)
+# """
+# Decentralized Algorithms
+# """
+# ## GP
+# theta_GP = dopt.GP(lr_1,B,step_size,int( depoch),theta_0)  
+# res_F_GP = error_lr_1.cost_gap_path( np.sum(theta_GP,axis = 1)/n)
+# ## ADDOPT
+# theta_ADDOPT = dopt.ADDOPT(lr_1,B,B,step_size,int( depoch ),theta_0)  
+# res_F_ADDOPT = error_lr_1.cost_gap_path( np.sum(theta_ADDOPT,axis = 1)/n)
+# ## SGP
+# theta_SGP = dopt.SGP(lr_1,B,step_size,int( depoch*b),theta_0)  
+# res_F_SGP = error_lr_1.cost_gap_path( np.sum(theta_SGP,axis = 1)/n)
+# ## SADDOPT               
+# theta_SADDOPT = dopt.SADDOPT(lr_1,B,B,step_size,int( depoch*b),theta_0)  
+# res_F_SADDOPT = error_lr_1.cost_gap_path( np.sum(theta_SADDOPT,axis = 1)/n)
 
-"""
-Save data
-"""
-np.savetxt('plots/ExpCifarResGP.txt', res_F_GP)
-np.savetxt('plots/ExpCifarResADDOPT.txt', res_F_ADDOPT)
-np.savetxt('plots/ExpCifarResSGP.txt', res_F_SGP)
-np.savetxt('plots/ExpCifarResSADDOPT.txt', res_F_SADDOPT)
+# """
+# Save data
+# """
+# np.savetxt('plots/ExpCifarResGP.txt', res_F_GP)
+# np.savetxt('plots/ExpCifarResADDOPT.txt', res_F_ADDOPT)
+# np.savetxt('plots/ExpCifarResSGP.txt', res_F_SGP)
+# np.savetxt('plots/ExpCifarResSADDOPT.txt', res_F_SADDOPT)
 
-"""
-Save plot
-"""
-mark_every = 10
-font = FontProperties()
-font.set_size(18)
-font2 = FontProperties()
-font2.set_size(10)
-plt.figure(3)
-plt.plot(res_F_GP,'-vb', markevery = mark_every)
-plt.plot(res_F_ADDOPT,'-^m', markevery = mark_every)
-plt.plot(res_F_SGP,'-dy', markevery = mark_every)
-plt.plot(res_F_SADDOPT,'-sr', markevery = mark_every)
-plt.grid(True)
-plt.yscale('log')
-plt.tick_params(labelsize='large', width=3)
-plt.title('CIFAR-10', fontproperties=font)
-plt.xlabel('Epochs', fontproperties=font)
-plt.ylabel('Optimality Gap', fontproperties=font)
-plt.legend(('GP', 'ADDOPT', 'SGP', 'SADDOPT'), prop=font2)
-plt.savefig('plots/ExpCifar.pdf', format = 'pdf', dpi = 4000, bbox_inches='tight')
+# """
+# Save plot
+# """
+# mark_every = 10
+# font = FontProperties()
+# font.set_size(18)
+# font2 = FontProperties()
+# font2.set_size(10)
+# plt.figure(3)
+# plt.plot(res_F_GP,'-vb', markevery = mark_every)
+# plt.plot(res_F_ADDOPT,'-^m', markevery = mark_every)
+# plt.plot(res_F_SGP,'-dy', markevery = mark_every)
+# plt.plot(res_F_SADDOPT,'-sr', markevery = mark_every)
+# plt.grid(True)
+# plt.yscale('log')
+# plt.tick_params(labelsize='large', width=3)
+# plt.title('CIFAR-10', fontproperties=font)
+# plt.xlabel('Epochs', fontproperties=font)
+# plt.ylabel('Optimality Gap', fontproperties=font)
+# plt.legend(('GP', 'ADDOPT', 'SGP', 'SADDOPT'), prop=font2)
+# plt.savefig('plots/ExpCifar.pdf', format = 'pdf', dpi = 4000, bbox_inches='tight')
