@@ -24,26 +24,26 @@ def save_npy(npys, root_path, exp_name):
     print("saving experiment results...")
     for i, array in enumerate(npys):
         np.save(
-            f"{root_path[i]}/{exp_name[i]}.npy", array
+            f"{root_path}/{exp_name[i]}.npy", array
         )
 
 def plot_figure(
-    data, mark, legend, save_path
+    data, formats, legend, save_path, plot_every
 ):
     import matplotlib.pyplot as plt
     from matplotlib.font_manager import FontProperties
 
     print("plotting the figure...")
-    
-    mark_every = 100
+
+    mark_every = 10
     font = FontProperties()
     font.set_size(18)
     font2 = FontProperties()
     font2.set_size(10)
     plt.figure(3)
 
-    for i, line in data:
-        plt.plot(line, mark[i], markevery = mark_every)
+    for i, line in enumerate(data):
+        plt.plot(line[0::plot_every], formats[i], markevery = mark_every)
 
     plt.legend(legend, prop=font2)
     plt.grid(True)

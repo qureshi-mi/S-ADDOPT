@@ -10,18 +10,32 @@ import math
 
 ## Centralized gradient descent
 def CGD(pr,learning_rate,K,theta_0):
+    """
+        Centralized SGD Optimizer with Full Training Data Batch.
+
+        This is the ground truth model in our experiments.
+    """
     start = time.time()
     theta_copy = cp.deepcopy( theta_0 )
     theta = [theta_copy]  
+
     for k in range(K):
         theta.append( theta[-1] - learning_rate * pr.grad(theta[-1]) )
         ut.monitor('CGD',k,K)
-    theta_opt = theta[-1]
-    F_opt = pr.F_val(theta[-1])
+
+    theta_opt = theta[-1]           # last set of parameters after training
+    F_opt = pr.F_val(theta[-1])     # value of the objective function
     print(f"Time Span: {time.time() - start}")
+
     return theta, theta_opt, F_opt
 
 def SGD(pr, learning_rate, K, theta_0, batch_size):
+    """
+        Centralized SGD Optimizer. This optimizer trains on all
+        data globally in a batched manner.
+
+        Note that the batch size can affect the convergence greatly.
+    """
     theta_copy = cp.deepcopy( theta_0 )
     theta = [theta_copy]  
 
@@ -29,9 +43,10 @@ def SGD(pr, learning_rate, K, theta_0, batch_size):
     print(f"update round {update_round} | pr.N {pr.N}")
 
     start = time.time()
-    for k in range(K):                      # TODO: each k here is actually one batch ... 
+    for k in range(K):      # k local training rounds
         temp = theta[-1]
-        for i in range(update_round):
+        # gradient updates happening in one local training round
+        for i in range(update_round):   
             permutation = np.random.permutation(pr.N)
             temp = temp - learning_rate * pr.grad(
                 temp, permute = permutation[0:batch_size], permute_flag = True
@@ -72,6 +87,9 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size):
 
 
 
+
+
+
 ## Centralized gradient descent with momentum
 def CNGD(pr,learning_rate,momentum,K,theta_0):
     theta = [theta_0]  
@@ -99,3 +117,4 @@ def CSGD(pr,learning_rate,K,theta_0):
             theta_epoch.append( cp.deepcopy(theta) )
         ut.monitor('CSGD',k,K)
     return theta_epoch
+
