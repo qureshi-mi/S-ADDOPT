@@ -119,26 +119,13 @@ class LR_L2( object ):
             return f_val/self.n + reg_val
             
         
-    def localgrad(self, theta, idx, j = None, batch_idx = None, permute = None, permute_flag = False):  ## idx is the node index, j is local sample index
-        if batch_idx != None:
-            assert permute == None
-            start, end = batch_idx[0], batch_idx[1]
-            temp1 = np.exp( 
-                np.matmul(
-                    self.X[idx][start:end],theta[idx]
-                ) * (-self.Y[idx][start:end])  
-            )
-            temp2 = ( temp1/(temp1+1) ) * (-self.Y[idx][start:end])
-            grad = self.X[idx][start:end] * temp2[:,np.newaxis]
-            return np.sum(grad, axis = 0) / (end-start) + self.reg * theta[idx]
+    def localgrad(self, theta, idx, j = None, permute = None, permute_flag = False):  ## idx is the node index, j is local sample index
         
         if permute_flag:
-            assert batch_idx == None
             assert j == None
             temp1 = np.exp( 
                 np.matmul(
-                    self.X[idx][permute], theta[idx]
-                ) * (-self.Y[idx][permute])  
+                    self.X[idx][permute], theta[idx]) * (-self.Y[idx][permute])  
             )
             temp2 = ( temp1/(temp1+1) ) * (-self.Y[idx][permute])
             grad = self.X[idx][permute] * temp2[:,np.newaxis]
@@ -158,15 +145,13 @@ class LR_L2( object ):
             grad = grad_lr + grad_reg
             return grad
         
-    def networkgrad(self, theta, idxv = None, batch_idx = None, permute = None, permute_flag = None):  ## network stochastic/batch/mini-batch gradient
+    def networkgrad(self, theta, idxv = None, permute = None, permute_flag = None):  ## network stochastic/batch/mini-batch gradient
+        """
+            all graph network based optimizer will call this function
+        """
         grad = np.zeros( (self.n,self.p) )
-        if batch_idx != None:
-            assert permute == None
-            for i in range(self.n):
-                grad[i] = self.localgrad(theta , i, batch_idx = batch_idx[i])
-            return grad
 
-        elif permute_flag:
+        if permute_flag:
             for i in range(self.n):
                 grad[i] = self.localgrad(theta , i, permute = permute[i])
             return grad
@@ -181,8 +166,13 @@ class LR_L2( object ):
             return grad
     
     def grad(self, theta, idx = None, permute = None, permute_flag = None): ## centralized stochastic/batch gradient
-        
+        """
+            when doing centralized SGD or centralized RR, this function is called.
+        """
         if permute_flag:
+            # Both SGD & RR is implemented here
+            # SGD will randomly permute all indices and pass in the first batch_size number of indices
+            # CRR will ensure that the entire permutation set has been looked through before the next permutation
             temp1 = np.exp( 
                 np.matmul(self.X_train[permute], theta) * (-self.Y_train[permute])  
             )
