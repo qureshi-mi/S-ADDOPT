@@ -14,6 +14,17 @@ def CGD(pr,learning_rate,K,theta_0):
         Centralized SGD Optimizer with Full Training Data Batch.
 
         This is the ground truth model in our experiments.
+
+        @param
+        :pr                 logistic model object
+        :learning_rate      learning rate
+        :K                  number of epochs
+        :theta_0            parameters of the logistic function
+
+        @return
+        :theta              list of logistic function parameters along the training
+        :theta_opt          best logistic function parameters after the training (last round param)
+        :F_opt              best logistic function value
     """
     start = time.time()
     theta_copy = cp.deepcopy( theta_0 )
@@ -31,10 +42,23 @@ def CGD(pr,learning_rate,K,theta_0):
 
 def SGD(pr, learning_rate, K, theta_0, batch_size):
     """
-        Centralized SGD Optimizer. This optimizer trains on all
+        Centralized mini-batch SGD Optimizer. This optimizer trains on all
         data globally in a batched manner.
 
-        Note that the batch size can affect the convergence greatly.
+        Note that the batch size and learning rate can affect the convergence 
+        greatly.
+
+        @param
+        :pr                 logistic model object
+        :learning_rate      learning rate
+        :K                  number of epochs
+        :theta_0            parameters of the logistic function
+        :batch_size         batch size of mini-batch SGD
+
+        @return
+        :theta              list of logistic function parameters along the training
+        :theta_opt          best logistic function parameters after the training (last round param)
+        :F_opt              best logistic function value
     """
     theta_copy = cp.deepcopy( theta_0 )
     theta = [theta_copy]  
@@ -44,6 +68,15 @@ def SGD(pr, learning_rate, K, theta_0, batch_size):
 
     start = time.time()
     for k in range(K):      # k local training rounds
+
+        # learning rate scheduling
+        if k > 200:
+            learning_rate = 10
+        elif k > 500:
+            learning_rate = 1
+        elif k > 900:
+            learning_rate = 0.1
+
         temp = theta[-1]
         # gradient updates happening in one local training round
         for i in range(update_round):   
@@ -62,6 +95,21 @@ def SGD(pr, learning_rate, K, theta_0, batch_size):
     return theta, theta_opt, F_opt
 
 def C_RR(pr, learning_rate, K, theta_0, batch_size):
+    """
+        Centralized Random Reshuflling Optimizer.
+
+        @param
+        :pr                 logistic model object
+        :learning_rate      learning rate
+        :K                  number of epochs
+        :theta_0            parameters of the logistic function
+        :batch_size         batch size of RR
+
+        @return
+        :theta              list of logistic function parameters along the training
+        :theta_opt          best logistic function parameters after the training (last round param)
+        :F_opt              best logistic function value
+    """
     theta_copy = cp.deepcopy( theta_0 )
     theta = [theta_copy]  
     
