@@ -1,8 +1,8 @@
 import numpy as np
 from utilities import plot_figure, save_npy
 
-root_path = "/Users/ultrali/Documents/Experiments/DRR/sanity-check/central_CRR"
-batch_sizes = [2000, 3000, 4000, 6000, 12000]
+root_path = "/Users/ultrali/Documents/Experiments/DRR/sanity-check/central_DRR"
+batch_sizes = [1000, 2000, 3000]
 exp_res_paths = [
     f"{root_path}/bz{bz}.npy" for bz in batch_sizes
 ]

@@ -37,7 +37,7 @@ step_size = 1/L/2                                                 ## selecting a
 Initializing variables
 """
 CEPOCH_base = 1000
-DEPOCH_base = 1000
+DEPOCH_base = 5000
 # depoch = 100
 
 model_para_central = np.random.normal(0,1,dim)
@@ -70,11 +70,32 @@ error_lr_0 = error(
 """
 Decentralized Algorithms
 """
-## SGD
-theta_D_SGD = dopt.D_SGD(
-    logis_model, B, step_size, int(DEPOCH_base), theta_0, batch_size
-)  
-res_F_D_SGD = error_lr_0.cost_gap_path( np.sum(theta_D_SGD,axis = 1)/n)
+all_res_F_DRR = []
+batch_sizes = [1000, 2000, 3000]
+for bz in batch_sizes:
+    theta_D_RR = dopt.D_RR(
+        logis_model, communication_matrix, step_size, int(DEPOCH_base), model_para_dis, bz, 1
+    )  
+    res_F_D_RR = error_lr_0.cost_gap_path( np.sum(theta_D_RR,axis = 1)/node_num)
+
+    all_res_F_DRR.append(res_F_D_RR)
+
+exp_save_path = f"{exp_log_path}/central_DRR"
+if not os.path.exists(exp_save_path):
+    os.mkdir(exp_save_path)
+
+save_npy(
+    all_res_F_DRR, exp_save_path,
+    [f"bz{bz}" for bz in batch_sizes]
+)
+plot_figure(
+    all_res_F_DRR, line_formats, 
+    [f"bz = {bz}" for bz in batch_sizes],
+    f"{exp_save_path}/convergence.pdf",
+    plot_every
+)
+
+
 
 # theta_D_RR = dopt.D_RR(lr_0,B,step_size,int(DEPOCH_base), theta_0, batch_size)  
 # res_F_D_RR = error_lr_0.cost_gap_path( np.sum(theta_D_RR,axis = 1)/n)
