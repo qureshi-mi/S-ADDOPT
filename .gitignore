@@ -1,0 +1,8 @@
+LogisticRegression/__pycache__
+LogisticRegression/Optimizers/__pycache__
+LogisticRegression/Problems/__pycache__
+NeuralNetwork/__pycache__
+NeuralNetwork/Optimizers/__pycache__
+NeuralNetwork/Problems/__pycache__
+mnist.npz
+.DS_Store

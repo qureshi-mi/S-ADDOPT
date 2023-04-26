@@ -120,7 +120,17 @@ class LR_L2( object ):
             
         
     def localgrad(self, theta, idx, j = None, permute = None, permute_flag = False):  ## idx is the node index, j is local sample index
-        
+        """
+            Simulate the local gradient computation at each node. 
+
+            @param
+            :theta          current parameter set of the model (Global Model)
+            :idx            node index
+            :j              local one-sample index
+            :permute        the set of samples that will be used for the local 
+                            gradient computation of node idx
+            :permute_flag   if permute_flag == True, then permute is not None
+        """
         if permute_flag:
             assert j == None
             temp1 = np.exp( 
@@ -147,13 +157,23 @@ class LR_L2( object ):
         
     def networkgrad(self, theta, idxv = None, permute = None, permute_flag = None):  ## network stochastic/batch/mini-batch gradient
         """
-            all graph network based optimizer will call this function
+            Optimizer for DSGD and DRR. All graph network based optimizer will 
+            call this function.
+
+            @param
+            :theta          current parameter set of the model (Global model)
+            :idxv           index vector for one-sample stochastic gradient on each nodes
+            :permute        a set of samples for gradient computation
+            :permute_flag   whether to use our implementation of gradient computation
+
+            @return
+            :grad           gradient of the objective function at each node
         """
         grad = np.zeros( (self.n,self.p) )
 
         if permute_flag:
             for i in range(self.n):
-                grad[i] = self.localgrad(theta , i, permute = permute[i])
+                grad[i] = self.localgrad(theta , i, permute = permute[i], permute_flag = True)
             return grad
         
         elif idxv is None:                        ## full batch
@@ -166,8 +186,18 @@ class LR_L2( object ):
             return grad
     
     def grad(self, theta, idx = None, permute = None, permute_flag = None): ## centralized stochastic/batch gradient
-        """
-            when doing centralized SGD or centralized RR, this function is called.
+        """ 
+            Gradient Computation for CSGD and CRR. Note that in our experiment, 
+            only permute and permute_flag are useful parameters
+
+            @param
+            :theta          current parameter set of the model
+            :idx            index of the sample to be used for gradient computation (for stochastic gradient)
+            :permute        a set of samples to be used for gradient computation (for CSGD and CRR)
+            :permute_flag   a flag to indicate whether to use our implementations of CSGD or CRR
+
+            @return
+            :grad           averaged gradient of the objective function at theta on the given set of samples
         """
         if permute_flag:
             # Both SGD & RR is implemented here
