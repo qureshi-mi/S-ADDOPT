@@ -36,7 +36,7 @@ step_size = 1/L/2                                                 ## selecting a
 """
 Initializing variables
 """
-CEPOCH_base = 1000
+CEPOCH_base = 5000
 DEPOCH_base = 5000
 # depoch = 100
 
@@ -45,28 +45,34 @@ model_para_dis = np.random.normal(0,1,(node_num,dim))
 undir_graph = Exponential_graph(node_num).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
 
-ground_truth_lr = 10*1/L
-lr = 10*1/L     
+ground_truth_lr = 0.01 * 10*1/L
+lr = 0.01 * 10*1/L     
 
 line_formats = [
     '-vb', '-^m', '-dy', '-sr', "-1k", "-2g", "-3C", "-4w"
 ]
 exp_log_path = "/Users/ultrali/Documents/Experiments/DRR/sanity-check"
-plot_every = 10
+plot_every = 100
 
 """
 Centralized solutions
 """
 ## solve the optimal solution of Logistic regression
-theta_CGD, theta_opt, F_opt = copt.CGD(
-    logis_model, ground_truth_lr, CEPOCH_base, model_para_central
+# theta_CGD, theta_opt, F_opt = copt.CGD(
+#     logis_model, ground_truth_lr, CEPOCH_base, model_para_central
+# ) 
+# error_lr_0 = error(
+#     logis_model, theta_opt, F_opt
+# )
+theta_CSGD, theta_opt, F_opt = copt.SGD(
+    logis_model, lr, CEPOCH_base, model_para_central, 1000
 ) 
 error_lr_0 = error(
     logis_model, theta_opt, F_opt
 )
 def CSGD_check():
     all_res_F_SGD = []
-    batch_sizes = [2000, 3000, 4000, 6000, 12000]
+    batch_sizes = [500, 2000]
     for bz in batch_sizes:
         theta_SGD, theta_opt, F_opt = copt.SGD(
             logis_model, lr, CEPOCH_base, model_para_central, bz
@@ -74,18 +80,28 @@ def CSGD_check():
         res_F_SGD = error_lr_0.cost_gap_path(theta_SGD)
         all_res_F_SGD.append(res_F_SGD)
 
+    # original code CGD path
+    theta_CGD, theta_opt, F_opt = copt.CGD(
+        logis_model, ground_truth_lr, CEPOCH_base, model_para_central
+    ) 
+    res_F_SGD = error_lr_0.cost_gap_path(theta_CGD)
+    all_res_F_SGD.append(res_F_SGD)
+    # my code CGD path
+    res_F_SGD = error_lr_0.cost_gap_path(theta_CSGD)
+    all_res_F_SGD.append(res_F_SGD)
+
     exp_save_path = f"{exp_log_path}/central_SGD"
     if not os.path.exists(exp_save_path):
         os.mkdir(exp_save_path)
 
     save_npy(
         all_res_F_SGD, exp_save_path,
-        [f"bz{bz}" for bz in batch_sizes]
+        [f"bz{bz}" for bz in batch_sizes] + ["CGD", "bz1000"]
     )
     plot_figure(
         all_res_F_SGD, line_formats, 
-        [f"bz = {bz}" for bz in batch_sizes],
-        f"{exp_save_path}/convergence.pdf",
+        [f"bz = {bz}" for bz in batch_sizes] + ["CGD", "bz1000"],
+        f"{exp_save_path}/convergence_base1000bz_SGD.pdf",
         plot_every
     )
 
@@ -171,5 +187,8 @@ def DRR_check():
     )
 
 
-
+CSGD_check()
+# CRR_check()
+# DSGD_check()
+# DRR_check()
 
