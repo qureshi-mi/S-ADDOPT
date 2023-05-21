@@ -69,14 +69,6 @@ def SGD(pr, learning_rate, K, theta_0, batch_size):
     start = time.time()
     for k in range(K):      # k local training rounds
 
-        # learning rate scheduling
-        if k > 200:
-            learning_rate = 10
-        elif k > 500:
-            learning_rate = 1
-        elif k > 900:
-            learning_rate = 0.1
-
         temp = theta[-1]
         # gradient updates happening in one local training round
         for i in range(update_round):   

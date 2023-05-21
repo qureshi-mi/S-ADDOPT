@@ -44,5 +44,5 @@ error_lr_0 = error(lr_0,theta_opt,F_opt)
 Decentralized Algorithms
 """
 ## SGD
-theta_GP = dopt.SGD()
-res_F_GP = error_lr_0.cost_gap_path( np.sum(theta_GP,axis = 1)/n)
+theta_SGD = dopt.SGD()
+res_F_SGD = error_lr_0.cost_gap_path( np.sum(theta_SGD,axis = 1)/n)
