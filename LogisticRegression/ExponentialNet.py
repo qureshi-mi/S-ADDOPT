@@ -15,7 +15,7 @@ from Problems.logistic_regression import LR_L2
 from Problems.log_reg_cifar import LR_L4
 from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
-from utilities import plot_figure, save_npy
+from utilities import plot_figure, save_npy, save_state, load_state
 
 ########################################################################################################################
 ####----------------------------------------------MNIST Classification----------------------------------------------####
@@ -23,71 +23,90 @@ from utilities import plot_figure, save_npy
 """
 Data processing for MNIST
 """
-node_num = 4                                                      ## number of nodes 
+node_num = 4  ## number of nodes
 logis_model = LR_L2(
-    node_num, limited_labels = False, balanced = True 
-)                                                                 ## instantiate the problem class 
-dim = logis_model.p                                               ## dimension of the model 
-L = logis_model.L                                                 ## L-smooth constant
-total_train_sample = logis_model.N                                ## total number of training samples
-avg_local_sample = logis_model.b                                  ## average number of local samples
-step_size = 1/L/2                                                 ## selecting an appropriate step-size
+    node_num, limited_labels=False, balanced=True
+)  ## instantiate the problem class
+dim = logis_model.p  ## dimension of the model
+L = logis_model.L  ## L-smooth constant
+total_train_sample = logis_model.N  ## total number of training samples
+avg_local_sample = logis_model.b  ## average number of local samples
+step_size = 1 / L / 2  ## selecting an appropriate step-size
 
 """
 Initializing variables
 """
-CEPOCH_base = 5000
+CEPOCH_base = 10000
 DEPOCH_base = 5000
 # depoch = 100
 
-model_para_central = np.random.normal(0,1,dim)
-model_para_dis = np.random.normal(0,1,(node_num,dim)) 
+model_para_central = np.random.normal(0, 1, dim)
+model_para_dis = np.random.normal(0, 1, (node_num, dim))
 undir_graph = Exponential_graph(node_num).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
 
-ground_truth_lr = 0.01 * 10*1/L
-lr = 0.01 * 10*1/L     
+ground_truth_lr = 0.01 * 10 * 1 / L
+lr = 0.01 * 10 * 1 / L
 
-line_formats = [
-    '-vb', '-^m', '-dy', '-sr', "-1k", "-2g", "-3C", "-4w"
-]
-exp_log_path = "/Users/ultrali/Documents/Experiments/DRR/sanity-check"
+line_formats = ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3C", "-4w"]
+exp_log_path = "/home/ubuntu/Desktop/DRR/experiment/sanity_check"
+ckp_load_path = "/home/ubuntu/Desktop/DRR/experiment/debug"
 plot_every = 100
+save_every = 1000
 
 """
 Centralized solutions
 """
-## solve the optimal solution of Logistic regression
-# theta_CGD, theta_opt, F_opt = copt.CGD(
-#     logis_model, ground_truth_lr, CEPOCH_base, model_para_central
-# ) 
-# error_lr_0 = error(
-#     logis_model, theta_opt, F_opt
+theta_CSGD_0 = None
+if ckp_load_path is not None:
+    theta_CSGD_0, theta_opt = load_state(ckp_load_path, "optimum")
+
+# model_para_central = theta_opt # use the optimum as the initial point
+# theta_CSGD, theta_opt, F_opt = copt.SGD(
+#     logis_model,
+#     lr,
+#     CEPOCH_base,
+#     model_para_central,
+#     256,
+#     exp_log_path,
+#     "optimum",
+#     save_every,
 # )
-theta_CSGD, theta_opt, F_opt = copt.SGD(
-    logis_model, lr, CEPOCH_base, model_para_central, 1000
-) 
-error_lr_0 = error(
-    logis_model, theta_opt, F_opt
-)
+error_lr_0 = error(logis_model, theta_opt, logis_model.F_val(theta_opt))
+# if theta_CSGD_0 is not None:
+#     theta_CSGD = np.concatenate((np.array(theta_CSGD_0), theta_CSGD), axis=0)
+# save_state(np.array(theta_CSGD), exp_log_path, "optimum")
+# plot_figure(
+#     [error_lr_0.cost_gap_path(theta_CSGD)],
+#     line_formats,
+#     ["optimum"],
+#     f"{exp_log_path}/optimum.pdf",
+#     plot_every,
+# )
+
+
 def CSGD_check():
     all_res_F_SGD = []
-    batch_sizes = [500, 2000]
+    batch_sizes = [100, 500, 2000]
     for bz in batch_sizes:
         theta_SGD, theta_opt, F_opt = copt.SGD(
-            logis_model, lr, CEPOCH_base, model_para_central, bz
-        ) 
+            logis_model,
+            lr,
+            CEPOCH_base,
+            model_para_central,
+            bz,
+            exp_log_path,
+            f"CSGD_bz{bz}_check",
+            save_every,
+        )
         res_F_SGD = error_lr_0.cost_gap_path(theta_SGD)
         all_res_F_SGD.append(res_F_SGD)
 
     # original code CGD path
     theta_CGD, theta_opt, F_opt = copt.CGD(
         logis_model, ground_truth_lr, CEPOCH_base, model_para_central
-    ) 
+    )
     res_F_SGD = error_lr_0.cost_gap_path(theta_CGD)
-    all_res_F_SGD.append(res_F_SGD)
-    # my code CGD path
-    res_F_SGD = error_lr_0.cost_gap_path(theta_CSGD)
     all_res_F_SGD.append(res_F_SGD)
 
     exp_save_path = f"{exp_log_path}/central_SGD"
@@ -95,23 +114,33 @@ def CSGD_check():
         os.mkdir(exp_save_path)
 
     save_npy(
-        all_res_F_SGD, exp_save_path,
-        [f"bz{bz}" for bz in batch_sizes] + ["CGD", "bz1000"]
+        all_res_F_SGD,
+        exp_save_path,
+        [f"bz{bz}" for bz in batch_sizes] + ["CGD"],
     )
     plot_figure(
-        all_res_F_SGD, line_formats, 
-        [f"bz = {bz}" for bz in batch_sizes] + ["CGD", "bz1000"],
-        f"{exp_save_path}/convergence_base1000bz_SGD.pdf",
-        plot_every
+        all_res_F_SGD,
+        line_formats,
+        [f"bz = {bz}" for bz in batch_sizes] + ["CGD"],
+        f"{exp_save_path}/convergence_SGD.pdf",
+        plot_every,
     )
+
 
 def CRR_check():
     all_res_F_CRR = []
-    batch_sizes = [2000, 3000, 4000, 6000, 12000]
+    batch_sizes = [100, 500, 2000]
     for bz in batch_sizes:
         theta_CRR, theta_opt, F_opt = copt.C_RR(
-            logis_model, lr, CEPOCH_base, model_para_central, bz
-        ) 
+            logis_model,
+            lr,
+            CEPOCH_base,
+            model_para_central,
+            bz,
+            exp_log_path,
+            f"CRR_bz{bz}_check",
+            save_every,
+        )
         res_F_CRR = error_lr_0.cost_gap_path(theta_CRR)
         all_res_F_CRR.append(res_F_CRR)
 
@@ -119,29 +148,39 @@ def CRR_check():
     if not os.path.exists(exp_save_path):
         os.mkdir(exp_save_path)
 
-    save_npy(
-        all_res_F_CRR, exp_save_path,
-        [f"bz{bz}" for bz in batch_sizes]
-    )
+    save_npy(all_res_F_CRR, exp_save_path, [f"bz{bz}" for bz in batch_sizes])
     plot_figure(
-        all_res_F_CRR, line_formats, 
+        all_res_F_CRR,
+        line_formats,
         [f"bz = {bz}" for bz in batch_sizes],
-        f"{exp_save_path}/convergence.pdf",
-        plot_every
+        f"{exp_save_path}/convergence_CRR.pdf",
+        plot_every,
     )
 
 
 """
 Decentralized Algorithms
 """
+
+
 def DSGD_check():
     all_res_F_DSGD = []
-    batch_sizes = [1000, 2000, 3000]
+    batch_sizes = [50, 100, 200]
     for bz in batch_sizes:
         theta_D_SGD = dopt.D_SGD(
-            logis_model, communication_matrix, step_size, int(DEPOCH_base), model_para_dis, bz, 1
-        )  
-        res_F_D_SGD = error_lr_0.cost_gap_path( np.sum(theta_D_SGD,axis = 1)/node_num)
+            logis_model,
+            communication_matrix,
+            step_size,
+            int(DEPOCH_base),
+            model_para_dis,
+            bz,
+            1,
+            exp_log_path,
+            f"DSGD_bz{bz}_check",
+            save_every,
+        )
+
+        res_F_D_SGD = error_lr_0.cost_gap_path(np.sum(theta_D_SGD, axis=1) / node_num)
 
         all_res_F_DSGD.append(res_F_D_SGD)
 
@@ -149,25 +188,33 @@ def DSGD_check():
     if not os.path.exists(exp_save_path):
         os.mkdir(exp_save_path)
 
-    save_npy(
-        all_res_F_DSGD, exp_save_path,
-        [f"bz{bz}" for bz in batch_sizes]
-    )
+    save_npy(all_res_F_DSGD, exp_save_path, [f"bz{bz}" for bz in batch_sizes])
     plot_figure(
-        all_res_F_DSGD, line_formats, 
+        all_res_F_DSGD,
+        line_formats,
         [f"bz = {bz}" for bz in batch_sizes],
-        f"{exp_save_path}/convergence.pdf",
-        plot_every
+        f"{exp_save_path}/convergence_DSGD.pdf",
+        plot_every,
     )
+
 
 def DRR_check():
     all_res_F_DRR = []
-    batch_sizes = [1000, 2000, 3000]
+    batch_sizes = [50, 100, 200]
     for bz in batch_sizes:
         theta_D_RR = dopt.D_RR(
-            logis_model, communication_matrix, step_size, int(DEPOCH_base), model_para_dis, bz, 1
-        )  
-        res_F_D_RR = error_lr_0.cost_gap_path( np.sum(theta_D_RR,axis = 1)/node_num)
+            logis_model,
+            communication_matrix,
+            step_size,
+            int(DEPOCH_base),
+            model_para_dis,
+            bz,
+            1,
+            exp_log_path,
+            f"DRR_bz{bz}_check",
+            save_every,
+        )
+        res_F_D_RR = error_lr_0.cost_gap_path(np.sum(theta_D_RR, axis=1) / node_num)
 
         all_res_F_DRR.append(res_F_D_RR)
 
@@ -175,20 +222,17 @@ def DRR_check():
     if not os.path.exists(exp_save_path):
         os.mkdir(exp_save_path)
 
-    save_npy(
-        all_res_F_DRR, exp_save_path,
-        [f"bz{bz}" for bz in batch_sizes]
-    )
+    save_npy(all_res_F_DRR, exp_save_path, [f"bz{bz}" for bz in batch_sizes])
     plot_figure(
-        all_res_F_DRR, line_formats, 
+        all_res_F_DRR,
+        line_formats,
         [f"bz = {bz}" for bz in batch_sizes],
-        f"{exp_save_path}/convergence.pdf",
-        plot_every
+        f"{exp_save_path}/convergence_DRR.pdf",
+        plot_every,
     )
 
 
-CSGD_check()
+# CSGD_check()
 # CRR_check()
-# DSGD_check()
-# DRR_check()
-
+DSGD_check()
+DRR_check()
