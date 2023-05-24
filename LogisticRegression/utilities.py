@@ -7,35 +7,35 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
+from analysis import error
 
 
-def monitor(name,current,total):
-    if (current+1) % (total/10) == 0:
-        print ( name + ' %d%% completed' % int(100*(current+1)/total) )
+def monitor(name, current, total):
+    if (current + 1) % (total / 10) == 0:
+        print(name + " %d%% completed" % int(100 * (current + 1) / total))
+
 
 def nx_options():
     options = {
-     'node_color': 'skyblue',
-     'node_size': 10,
-     'edge_color': 'grey',
-     'width': 0.5,
-     'arrows': False,
-     'node_shape': 'o',}
+        "node_color": "skyblue",
+        "node_size": 10,
+        "edge_color": "grey",
+        "width": 0.5,
+        "arrows": False,
+        "node_shape": "o",
+    }
     return options
 
-def save_npy(npys, root_path, exp_name):
 
+def save_npy(npys, root_path, exp_name):
     print("saving experiment results...")
     for i, array in enumerate(npys):
-        np.save(
-            f"{root_path}/{exp_name[i]}.npy", array
-        )
+        np.save(f"{root_path}/{exp_name[i]}.npy", array)
 
-def plot_figure(
-    data, formats, legend, save_path, plot_every
-):
+
+def plot_figure(data, formats, legend, save_path, plot_every):
     print("plotting the figure...")
-
+    plt.clf()
     mark_every = 1
     font = FontProperties()
     font.set_size(18)
@@ -44,33 +44,50 @@ def plot_figure(
     plt.figure(3)
 
     for i, line in enumerate(data):
-        xaxis = np.linspace(0, len(line), num=len(line)+1, dtype=int)
-        plt.plot(xaxis[::plot_every], line[::plot_every], formats[i], markevery = mark_every)
+        xaxis = np.linspace(0, len(line)-1, num=len(line), dtype=int)
+        yaxis = [abs(point) for point in  line[::plot_every]]   # the F_val could be negative
+        plt.plot(
+            xaxis[::plot_every], yaxis, formats[i], markevery=mark_every
+        )
 
     plt.legend(legend, prop=font2)
     plt.grid(True)
-    plt.yscale('log')
-    plt.tick_params(labelsize='large', width=3)
-    plt.title('MNIST', fontproperties=font)
-    plt.xlabel('Epochs', fontproperties=font)
-    plt.ylabel('Optimality Gap', fontproperties=font)
-    plt.savefig(save_path, format = 'pdf', dpi = 4000, bbox_inches='tight')
+    plt.yscale("log")
+    plt.tick_params(labelsize="large", width=3)
+    plt.title("MNIST", fontproperties=font)
+    plt.xlabel("Epochs", fontproperties=font)
+    plt.ylabel("Optimality Gap", fontproperties=font)
+    plt.savefig(save_path, format="pdf", dpi=4000, bbox_inches="tight")
+    print("figure plotted...")
 
-def save_state():
 
-    pass
+def save_state(theta, save_path, exp_name):
+    print("saving experiment results...")
+    np.save(f"{save_path}/{exp_name}_theta", theta)
 
-def loadPathAndPlot(
-    save_path, exp_name
-):
+
+def load_state(save_path, exp_name):
+    print("loading experiment results...")
+    theta = np.load(f"{save_path}/{exp_name}_theta.npy")
+    return theta, theta[-1]  # return the state sequence and the last state (optimum)
+
+def loadPathAndPlot(save_path, exp_names, error_lr, plot_every):
     load_thetas = []
-    for i, name in enumerate(exp_name):
-        load_thetas.append(np.load(f"{save_path}/{name}"))
+    print("loading error gap results...")
+    for i, name in enumerate(exp_names):
+        load_thetas.append(np.load(f"{save_path}/{name}_theta.npy"))
 
-    # theta_CGD, theta_opt, F_opt = copt.CGD(
-    #     logis_model, ground_truth_lr, CEPOCH_base, model_para_central
-    # ) 
-    # error_lr_0 = error(
-    #     logis_model, theta_opt, F_opt
-    # )
+    print("plotting error gap results...")
+    plot_figure(
+        [error_lr.cost_gap_path(theta) for theta in load_thetas],
+        ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3C", "-4w"],
+        [f"optimum{i}" for i in range(len(exp_names))],
+        f"{save_path}/cost_gap_all.pdf",
+        plot_every
+    )
 
+
+def load_optimum(pr, save_path, exp_name):
+    theta, theta_opt = load_state(save_path, exp_name)
+    error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
+    return error_lr

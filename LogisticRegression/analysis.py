@@ -36,7 +36,7 @@ class error:
     def cost_gap_path(self, iterates):
         K = len(iterates)
         result = [ ]
-        for k in range(K):
+        for k in range(K):  # TODO: use numpy vectorization
             result.append( error.cost_gap_point(self,iterates[k]) )
         return result
 

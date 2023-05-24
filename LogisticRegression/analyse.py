@@ -1,31 +1,15 @@
 import numpy as np
-from utilities import plot_figure, save_npy
+from utilities import plot_figure, save_npy, load_optimum, load_state, loadPathAndPlot
+from Problems.logistic_regression import LR_L2
 
-root_path = "/Users/ultrali/Documents/Experiments/DRR/sanity-check/central_SGD"
-batch_sizes = [100, 2000]
-exp_res_paths = [
-    f"{root_path}/bz{bz}.npy" for bz in batch_sizes
-]
+exp_path = "/home/ubuntu/Desktop/DRR/experiment/debug"
 
 
-line_formats = [
-    '-vb', '-^m', '-dy', '-sr', "-1k", "-2g", "-3C", "-4w"
-]
-plot_every = 1
+node_num = 4  ## number of nodes
+logis_model = LR_L2(
+    node_num, limited_labels=False, balanced=True
+)  ## instantiate the problem class
 
-all_res = []
-for path in exp_res_paths:
-    all_res.append(
-        np.load(path)
-    )
+error_lr_0 = load_optimum(logis_model, exp_path, "optimum")
+loadPathAndPlot(exp_path, ["optimum"], error_lr_0, 2000)
 
-plot_figure(
-    all_res, line_formats, 
-    [f"bz = {bz}" for bz in batch_sizes],
-    f"{root_path}/test.pdf",
-    plot_every
-)
-
-# for errors in all_res:
-#     last_n = 20
-#     print(f"floor = {np.sum( errors[-last_n:] ) / last_n}")
