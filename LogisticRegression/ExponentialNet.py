@@ -20,10 +20,13 @@ from utilities import plot_figure, save_npy, save_state, load_state
 ########################################################################################################################
 ####----------------------------------------------MNIST Classification----------------------------------------------####
 ########################################################################################################################
+
+
+
 """
 Data processing for MNIST
 """
-node_num = 4  ## number of nodes
+node_num = 16  ## number of nodes
 logis_model = LR_L2(
     node_num, limited_labels=False, balanced=True
 )  ## instantiate the problem class
@@ -36,7 +39,7 @@ step_size = 1 / L / 2  ## selecting an appropriate step-size
 """
 Initializing variables
 """
-CEPOCH_base = 10000
+CEPOCH_base = 5000
 DEPOCH_base = 5000
 # depoch = 100
 
@@ -45,14 +48,14 @@ model_para_dis = np.random.normal(0, 1, (node_num, dim))
 undir_graph = Exponential_graph(node_num).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
 
-ground_truth_lr = 0.01 * 10 * 1 / L
-lr = 0.01 * 10 * 1 / L
+ground_truth_lr = 0.0001 * 1 / L
+lr = 0.0001 * 1 / L
 
-line_formats = ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3C", "-4w"]
-exp_log_path = "/home/ubuntu/Desktop/DRR/experiment/sanity_check"
+line_formats = ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3r", "-.kp", "-+c", "-xm", "-|y", "-_r"]
+exp_log_path = "/home/ubuntu/Desktop/DRR/experiment/lr0001"
 ckp_load_path = "/home/ubuntu/Desktop/DRR/experiment/debug"
-plot_every = 100
-save_every = 1000
+plot_every = 250
+save_every = 2500
 
 """
 Centralized solutions
@@ -87,7 +90,7 @@ error_lr_0 = error(logis_model, theta_opt, logis_model.F_val(theta_opt))
 
 def CSGD_check():
     all_res_F_SGD = []
-    batch_sizes = [100, 500, 2000]
+    batch_sizes = [50]
     for bz in batch_sizes:
         theta_SGD, theta_opt, F_opt = copt.SGD(
             logis_model,
@@ -129,7 +132,7 @@ def CSGD_check():
 
 def CRR_check():
     all_res_F_CRR = []
-    batch_sizes = [100, 500, 2000]
+    batch_sizes = [50]
     for bz in batch_sizes:
         theta_CRR, theta_opt, F_opt = copt.C_RR(
             logis_model,
@@ -165,34 +168,42 @@ Decentralized Algorithms
 
 def DSGD_check():
     all_res_F_DSGD = []
-    batch_sizes = [50, 100, 200]
-    for bz in batch_sizes:
-        theta_D_SGD = dopt.D_SGD(
-            logis_model,
-            communication_matrix,
-            step_size,
-            int(DEPOCH_base),
-            model_para_dis,
-            bz,
-            1,
-            exp_log_path,
-            f"DSGD_bz{bz}_check",
-            save_every,
-        )
+    batch_sizes = [50]
+    update_rounds = [int(logis_model.data_distr[0] / bz) for bz in batch_sizes]
+    update_rounds = [1, 2, 5, 10, 15]
+    exp_names = []
+    legends = []
 
-        res_F_D_SGD = error_lr_0.cost_gap_path(np.sum(theta_D_SGD, axis=1) / node_num)
+    for idx, bz in enumerate(batch_sizes):
+        for comm_round in update_rounds:
+            theta_D_SGD = dopt.D_SGD(
+                logis_model,
+                communication_matrix,
+                step_size,
+                int(DEPOCH_base),
+                model_para_dis,
+                bz,
+                comm_round,
+                exp_log_path,
+                f"DSGD_bz{bz}_ur{comm_round}",
+                save_every,
+            )
 
-        all_res_F_DSGD.append(res_F_D_SGD)
+            res_F_D_SGD = error_lr_0.cost_gap_path(np.sum(theta_D_SGD, axis=1) / node_num)
 
-    exp_save_path = f"{exp_log_path}/central_DSGD"
+            all_res_F_DSGD.append(res_F_D_SGD)
+            exp_names.append(f"bz{bz}_ur{comm_round}")
+            legends.append(f"bz = {bz}, ur = {comm_round}")
+
+    exp_save_path = f"{exp_log_path}/DSGD"
     if not os.path.exists(exp_save_path):
         os.mkdir(exp_save_path)
 
-    save_npy(all_res_F_DSGD, exp_save_path, [f"bz{bz}" for bz in batch_sizes])
+    save_npy(all_res_F_DSGD, exp_save_path, exp_names)
     plot_figure(
         all_res_F_DSGD,
         line_formats,
-        [f"bz = {bz}" for bz in batch_sizes],
+        legends,
         f"{exp_save_path}/convergence_DSGD.pdf",
         plot_every,
     )
@@ -200,39 +211,48 @@ def DSGD_check():
 
 def DRR_check():
     all_res_F_DRR = []
-    batch_sizes = [50, 100, 200]
-    for bz in batch_sizes:
-        theta_D_RR = dopt.D_RR(
-            logis_model,
-            communication_matrix,
-            step_size,
-            int(DEPOCH_base),
-            model_para_dis,
-            bz,
-            1,
-            exp_log_path,
-            f"DRR_bz{bz}_check",
-            save_every,
-        )
-        res_F_D_RR = error_lr_0.cost_gap_path(np.sum(theta_D_RR, axis=1) / node_num)
+    batch_sizes = [50]
+    update_rounds = [int(logis_model.data_distr[0] / bz) for bz in batch_sizes]
+    update_rounds = [1, 2, 5, 10, 15]
+    exp_names = []
+    legends = []
 
-        all_res_F_DRR.append(res_F_D_RR)
+    for idx, bz in enumerate(batch_sizes):
+        for comm_round in update_rounds:
+            comm_round = int(comm_round)
+            theta_D_RR = dopt.D_RR(
+                logis_model,
+                communication_matrix,
+                step_size,
+                int(DEPOCH_base),
+                model_para_dis,
+                bz,
+                comm_round,
+                exp_log_path,
+                f"DRR_bz{bz}_ur{comm_round}",
+                save_every,
+            )
+            res_F_D_RR = error_lr_0.cost_gap_path(np.sum(theta_D_RR, axis=1) / node_num)
 
-    exp_save_path = f"{exp_log_path}/central_DRR"
+            all_res_F_DRR.append(res_F_D_RR)
+            exp_names.append(f"bz{bz}_ur{comm_round}")
+            legends.append(f"bz = {bz}, ur = {comm_round}")
+
+    exp_save_path = f"{exp_log_path}/DRR"
     if not os.path.exists(exp_save_path):
         os.mkdir(exp_save_path)
 
-    save_npy(all_res_F_DRR, exp_save_path, [f"bz{bz}" for bz in batch_sizes])
+    save_npy(all_res_F_DRR, exp_save_path, exp_names)
     plot_figure(
         all_res_F_DRR,
         line_formats,
-        [f"bz = {bz}" for bz in batch_sizes],
+        legends,
         f"{exp_save_path}/convergence_DRR.pdf",
         plot_every,
     )
 
 
-# CSGD_check()
-# CRR_check()
+CSGD_check()
+CRR_check()
 DSGD_check()
 DRR_check()
