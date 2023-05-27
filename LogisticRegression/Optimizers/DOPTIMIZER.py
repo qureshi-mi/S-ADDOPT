@@ -66,7 +66,7 @@ def D_SGD(
         theta.append(cp.deepcopy(temp))
 
         if k % save_every == 0 or k + 1 == K:
-            save_state(theta, save_path, exp_name)
+            # save_state(theta, save_path, exp_name)
             avg_theta = np.sum(theta[-1], axis=0) / prd.n
             error_lr = error(prd, avg_theta, prd.F_val(avg_theta))
             plot_figure(
@@ -143,7 +143,7 @@ def D_RR(
         theta.append(cp.deepcopy(temp))
 
         if k % save_every == 0 or k + 1 == K:
-            save_state(theta, save_path, exp_name)
+            # save_state(theta, save_path, exp_name)
             avg_theta = np.sum(theta[-1], axis=0) / prd.n
             error_lr = error(prd, avg_theta, prd.F_val(avg_theta))
             plot_figure(

@@ -34,13 +34,12 @@ dim = logis_model.p  ## dimension of the model
 L = logis_model.L  ## L-smooth constant
 total_train_sample = logis_model.N  ## total number of training samples
 avg_local_sample = logis_model.b  ## average number of local samples
-step_size = 1 / L / 2  ## selecting an appropriate step-size
 
 """
 Initializing variables
 """
-CEPOCH_base = 5000
-DEPOCH_base = 5000
+CEPOCH_base = 10000
+DEPOCH_base = 10000
 # depoch = 100
 
 model_para_central = np.random.normal(0, 1, dim)
@@ -48,14 +47,15 @@ model_para_dis = np.random.normal(0, 1, (node_num, dim))
 undir_graph = Exponential_graph(node_num).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
 
-ground_truth_lr = 0.0001 * 1 / L
-lr = 0.0001 * 1 / L
+ground_truth_lr = 0.01 * 1 / L
+C_lr = 0.01 / L
+D_lr = 0.01 / L  ## selecting an appropriate step-size
 
 line_formats = ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3r", "-.kp", "-+c", "-xm", "-|y", "-_r"]
-exp_log_path = "/home/ubuntu/Desktop/DRR/experiment/lr0001"
+exp_log_path = "/home/ubuntu/Desktop/DRR/experiment/lr01"
 ckp_load_path = "/home/ubuntu/Desktop/DRR/experiment/debug"
 plot_every = 250
-save_every = 2500
+save_every = 5000
 
 """
 Centralized solutions
@@ -63,35 +63,15 @@ Centralized solutions
 theta_CSGD_0 = None
 if ckp_load_path is not None:
     theta_CSGD_0, theta_opt = load_state(ckp_load_path, "optimum")
-
-# model_para_central = theta_opt # use the optimum as the initial point
-# theta_CSGD, theta_opt, F_opt = copt.SGD(
-#     logis_model,
-#     lr,
-#     CEPOCH_base,
-#     model_para_central,
-#     256,
-#     exp_log_path,
-#     "optimum",
-#     save_every,
-# )
+theta_CSGD_0 = None
 error_lr_0 = error(logis_model, theta_opt, logis_model.F_val(theta_opt))
-# if theta_CSGD_0 is not None:
-#     theta_CSGD = np.concatenate((np.array(theta_CSGD_0), theta_CSGD), axis=0)
-# save_state(np.array(theta_CSGD), exp_log_path, "optimum")
-# plot_figure(
-#     [error_lr_0.cost_gap_path(theta_CSGD)],
-#     line_formats,
-#     ["optimum"],
-#     f"{exp_log_path}/optimum.pdf",
-#     plot_every,
-# )
 
 
 def CSGD_check():
     all_res_F_SGD = []
-    batch_sizes = [50]
+    batch_sizes = [50, 100, 200]
     for bz in batch_sizes:
+        lr = C_lr * (bz/100)
         theta_SGD, theta_opt, F_opt = copt.SGD(
             logis_model,
             lr,
@@ -132,8 +112,9 @@ def CSGD_check():
 
 def CRR_check():
     all_res_F_CRR = []
-    batch_sizes = [50]
+    batch_sizes = [50, 100, 200]
     for bz in batch_sizes:
+        lr = C_lr * (bz/100)
         theta_CRR, theta_opt, F_opt = copt.C_RR(
             logis_model,
             lr,
@@ -168,18 +149,19 @@ Decentralized Algorithms
 
 def DSGD_check():
     all_res_F_DSGD = []
-    batch_sizes = [50]
+    batch_sizes = [50, 100, 200]
     update_rounds = [int(logis_model.data_distr[0] / bz) for bz in batch_sizes]
-    update_rounds = [1, 2, 5, 10, 15]
+    update_rounds = [1]
     exp_names = []
     legends = []
 
     for idx, bz in enumerate(batch_sizes):
         for comm_round in update_rounds:
+            lr = D_lr * (bz/100)
             theta_D_SGD = dopt.D_SGD(
                 logis_model,
                 communication_matrix,
-                step_size,
+                lr,
                 int(DEPOCH_base),
                 model_para_dis,
                 bz,
@@ -211,19 +193,20 @@ def DSGD_check():
 
 def DRR_check():
     all_res_F_DRR = []
-    batch_sizes = [50]
+    batch_sizes = [50, 100, 200]
     update_rounds = [int(logis_model.data_distr[0] / bz) for bz in batch_sizes]
-    update_rounds = [1, 2, 5, 10, 15]
+    update_rounds = [1]
     exp_names = []
     legends = []
 
     for idx, bz in enumerate(batch_sizes):
         for comm_round in update_rounds:
+            lr = D_lr * (bz/100)
             comm_round = int(comm_round)
             theta_D_RR = dopt.D_RR(
                 logis_model,
                 communication_matrix,
-                step_size,
+                lr,
                 int(DEPOCH_base),
                 model_para_dis,
                 bz,

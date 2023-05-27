@@ -86,7 +86,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, save_path, exp_name, save_eve
         theta.append(temp)
         ut.monitor("SGD", k, K)
         if k % save_every == 0:
-            save_state(theta, save_path, exp_name)
+            # save_state(theta, save_path, exp_name)
             error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
             plot_figure(
                 [error_lr.cost_gap_path(theta)],
@@ -136,7 +136,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, save_path, exp_name, save_ev
         ut.monitor("C_RR", k, K)
         theta.append(temp)
         if k % save_every == 0:
-            save_state(theta, save_path, exp_name)
+            # save_state(theta, save_path, exp_name)
             error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
             plot_figure(
                 [error_lr.cost_gap_path(theta)],

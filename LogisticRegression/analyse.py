@@ -14,17 +14,23 @@ from Problems.logistic_regression import LR_L2
 # loadPathAndPlot(exp_path, ["optimum"], error_lr_0, 2000)
 
 
-exp_path = "/home/ubuntu/Desktop/DRR/experiment/inceasingComm"
+exp_path = "/home/ubuntu/Desktop/DRR/experiment/lr_bz_ratio"
 
-batch_size = [100]
-update_round = [i for i in range(1, 8)]
+batch_size = [50, 200, 500]
+update_round = [i for i in range(1, 2)]
 exp_names = []
 legends = []
 for idx, bz in enumerate(batch_size):
     for ur in update_round:
+        exp_names.append(f"central_SGD/bz{bz}")
+        exp_names.append(f"central_CRR/bz{bz}")
         exp_names.append(f"DSGD/bz{bz}_ur{ur}")
+        exp_names.append(f"DRR/bz{bz}_ur{ur}")
+        legends.append(f"SGD, bz={bz}")
+        legends.append(f"CRR, bz={bz}")
         legends.append(f"DSGD, bz={bz} ur = {ur}")
+        legends.append(f"DRR, bz={bz} ur = {ur}")
 
-loadGapAndPlot(exp_path, exp_names, legends, 500, "DSGD_incresing_rounds")
+loadGapAndPlot(exp_path, exp_names, legends, 500, "fixed_lr")
 
 
