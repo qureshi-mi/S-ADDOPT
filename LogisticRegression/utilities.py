@@ -73,19 +73,36 @@ def load_state(save_path, exp_name):
 
 def loadPathAndPlot(save_path, exp_names, error_lr, plot_every):
     load_thetas = []
-    print("loading error gap results...")
+    print("loading theta training results...")
     for i, name in enumerate(exp_names):
         load_thetas.append(np.load(f"{save_path}/{name}_theta.npy"))
+    gaps = [error_lr.cost_gap_path(theta) for theta in load_thetas]
 
     print("plotting error gap results...")
     plot_figure(
-        [error_lr.cost_gap_path(theta) for theta in load_thetas],
+        gaps,
         ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3C", "-4w"],
         [f"optimum{i}" for i in range(len(exp_names))],
         f"{save_path}/cost_gap_all.pdf",
         plot_every
     )
 
+def loadGapAndPlot(save_path, exp_names, legands, plot_every, fig_name):
+    gaps = []
+    print("loading error gap results...")
+    for i, name in enumerate(exp_names):
+        gaps.append(np.load(f"{save_path}/{name}.npy"))
+    
+    # gaps = [gap[:5000] for gap in gaps]
+
+    print("plotting error gap results...")
+    plot_figure(
+        gaps,
+        ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3r", "-.kp", "-+c", "-xm", "-|y", "-_r"],
+        legands,
+        f"{save_path}/{fig_name}.pdf",
+        plot_every
+    )
 
 def load_optimum(pr, save_path, exp_name):
     theta, theta_opt = load_state(save_path, exp_name)

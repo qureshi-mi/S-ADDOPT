@@ -56,7 +56,7 @@ def D_SGD(
             grad = prd.networkgrad(temp, permute=sample_vec, permute_flag=True)
 
             temp = temp - learning_rate * grad
-            if i % comm_round == 0:
+            if (i+1) % comm_round == 0:
                 # averaging from neighbours
                 temp = np.matmul(
                     weight, temp
@@ -73,7 +73,7 @@ def D_SGD(
                 [error_lr.cost_gap_path(np.sum(theta, axis=1) / prd.n)],
                 ["-vb"],
                 [f"{exp_name}{k}"],
-                f"{save_path}/{exp_name}{k}.pdf",
+                f"{save_path}/{exp_name}_{k}.pdf",
                 100,
             )
 
@@ -135,7 +135,7 @@ def D_RR(
             grad = prd.networkgrad(temp, permute=permutes, permute_flag=True)
 
             temp = temp - learning_rate * grad
-            if round % comm_round == 0:
+            if (round+1) % comm_round == 0:
                 # averaging from neighbours
                 temp = np.matmul(weight, temp)
 
@@ -150,7 +150,7 @@ def D_RR(
                 [error_lr.cost_gap_path(np.sum(theta, axis=1) / prd.n)],
                 ["-vb"],
                 [f"{exp_name}{k}"],
-                f"{save_path}/{exp_name}{k}.pdf",
+                f"{save_path}/{exp_name}_{k}.pdf",
                 100,
             )
 
