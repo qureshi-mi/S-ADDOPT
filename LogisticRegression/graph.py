@@ -13,14 +13,13 @@ The class of grid graph: undirected
 One node at maximum will connect to four nodes around it
 """
 class Grid_graph:
-    def __init__(self, number_of_nodes, k):
-        self.size = number_of_nodes     # note that number of nodes = k**2
-        self.k = k
+    def __init__(self, side_length):
+        self.k = side_length
+        self.size = side_length**2     # note that number of nodes = k**2
     
     def undirected(self):
         U = np.zeros( (self.size,self.size) )
         for i in range( self.size ):
-            print(f"{i} {self.k}")
             U[i][i] = 1
 
             residual = i % self.k
