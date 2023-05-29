@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 from analysis import error
+import os
 
 
 def monitor(name, current, total):
@@ -108,3 +109,8 @@ def load_optimum(pr, save_path, exp_name):
     theta, theta_opt = load_state(save_path, exp_name)
     error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
     return error_lr
+
+def initDir(dir_path):
+    if not os.path.exists(dir_path):
+        os.mkdir(dir_path)
+
