@@ -21,7 +21,6 @@ from utilities import plot_figure, save_npy, save_state, load_state, initDir
 ########################################################################################################################
 
 
-
 """
 Data processing for MNIST
 """
@@ -37,23 +36,38 @@ avg_local_sample = logis_model.b  ## average number of local samples
 """
 Initializing variables
 """
-CEPOCH_base = 10
-DEPOCH_base = 10
-# depoch = 100
+CEPOCH_base = 40000
+DEPOCH_base = 40000
 
 model_para_central = np.random.normal(0, 1, dim)
 model_para_dis = np.random.normal(0, 1, (node_num, dim))
 undir_graph = Exponential_graph(node_num).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
+communication_rounds = [1]
 
-C_lr = [0.1 / L, 0.01 / L, 0.001 / L, 0.0001 / L]
-D_lr = [0.1 / L, 0.01 / L, 0.001 / L, 0.0001 / L]  ## selecting an appropriate step-size
+C_lr = [0.1 / L * i / 10 for i in range(1, 11)]
+D_lr = [0.1 / L * i / 10 for i in range(1, 11)]  ## selecting an appropriate step-size
+C_batch_size = [50]
+D_batch_size = [50]
 
-line_formats = ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3r", "-.kp", "-+c", "-xm", "-|y", "-_r"]
-exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/debug"
+line_formats = [
+    "-vb",
+    "-^m",
+    "-dy",
+    "-sr",
+    "-1k",
+    "-2g",
+    "-3r",
+    "-.kp",
+    "-+c",
+    "-xm",
+    "-|y",
+    "-_r",
+]
+exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/lr_tune_8_08"
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"
-plot_every = 250
-save_every = 5
+plot_every = 1000
+save_every = 5000
 
 """
 Optimum solution
@@ -64,16 +78,26 @@ theta_CSGD_0 = None
 error_lr_0 = error(logis_model, theta_opt, logis_model.F_val(theta_opt))
 
 
-def CSGD_check():
+def CSGD_check(
+    logis_model,
+    model_para,
+    C_lr,
+    C_batch_size,
+    CEPOCH_base,
+    exp_log_path,
+    save_every,
+    error_lr,
+    line_formats,
+    plot_every,
+):
     exp_save_path = f"{exp_log_path}/central_SGD"
     initDir(exp_save_path)
     train_log_path = f"{exp_save_path}/training"
     initDir(train_log_path)
 
     all_res_F_SGD = []
-    batch_sizes = [100]
     params = []
-    for bz in batch_sizes:
+    for bz in C_batch_size:
         for lr in C_lr:
             params.append((bz, lr))
     # learning_rates = [C_lr * (bz/100) for bz in batch_sizes]
@@ -83,14 +107,15 @@ def CSGD_check():
             logis_model,
             lr,
             CEPOCH_base,
-            model_para_central,
+            model_para,
             bz,
             train_log_path,
             f"CSGD_bz{bz}_lr{lr:.3f}_check",
             save_every,
         )
-        res_F_SGD = error_lr_0.cost_gap_path(theta_SGD)
+        res_F_SGD = error_lr.cost_gap_path(theta_SGD)
         all_res_F_SGD.append(res_F_SGD)
+        np.save(f"{exp_save_path}/CSGD_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
 
     save_npy(
         all_res_F_SGD,
@@ -106,35 +131,49 @@ def CSGD_check():
     )
 
 
-def CRR_check():
+def CRR_check(
+    logis_model,
+    model_para,
+    C_lr,
+    C_batch_size,
+    CEPOCH_base,
+    exp_log_path,
+    save_every,
+    error_lr,
+    line_formats,
+    plot_every,
+):
     exp_save_path = f"{exp_log_path}/central_CRR"
     initDir(exp_save_path)
     train_log_path = f"{exp_save_path}/training"
     initDir(train_log_path)
 
     all_res_F_CRR = []
-    batch_sizes = [100]
     params = []
-    for bz in batch_sizes:
+    for bz in C_batch_size:
         for lr in C_lr:
             params.append((bz, lr))
-    # learning_rates = [C_lr * (bz/100) for bz in batch_sizes]
 
     for idx, (bz, lr) in enumerate(params):
         theta_CRR, theta_opt, F_opt = copt.C_RR(
             logis_model,
             lr,
             CEPOCH_base,
-            model_para_central,
+            model_para,
             bz,
             train_log_path,
             f"CRR_bz{bz}_lr{lr}_check",
             save_every,
         )
-        res_F_CRR = error_lr_0.cost_gap_path(theta_CRR)
+        res_F_CRR = error_lr.cost_gap_path(theta_CRR)
         all_res_F_CRR.append(res_F_CRR)
+        np.save(f"{exp_save_path}/CRR_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
 
-    save_npy(all_res_F_CRR, exp_save_path, [f"bz{bz}_lr{lr}" for idx, (bz, lr) in enumerate(params)])
+    save_npy(
+        all_res_F_CRR,
+        exp_save_path,
+        [f"bz{bz}_lr{lr}" for idx, (bz, lr) in enumerate(params)],
+    )
     plot_figure(
         all_res_F_CRR,
         line_formats,
@@ -149,44 +188,57 @@ Decentralized Algorithms
 """
 
 
-def DSGD_check():
+def DSGD_check(
+    logis_model,
+    model_para,
+    D_lr,
+    D_batch_size,
+    DEPOCH_base,
+    communication_matrix,
+    communication_rounds,
+    exp_log_path,
+    save_every,
+    error_lr,
+    line_formats,
+    plot_every,
+):
     exp_save_path = f"{exp_log_path}/DSGD"
     initDir(exp_save_path)
     train_log_path = f"{exp_save_path}/training"
     initDir(train_log_path)
-    
+
     all_res_F_DSGD = []
-    batch_sizes = [100]
-    update_rounds = [int(logis_model.data_distr[0] / bz) for bz in batch_sizes]
-    update_rounds = [1]
     exp_names = []
     legends = []
     params = []
-    for bz in batch_sizes:
+    for bz in D_batch_size:
         for lr in D_lr:
-            params.append((bz, lr))
-    # learning_rates = [C_lr * (bz/100) for bz in batch_sizes]
+            for cr in communication_rounds:
+                params.append((bz, lr, cr))
 
-    for idx, (bz, lr) in enumerate(params):
-        for comm_round in update_rounds:
-            theta_D_SGD = dopt.D_SGD(
-                logis_model,
-                communication_matrix,
-                lr,
-                int(DEPOCH_base),
-                model_para_dis,
-                bz,
-                comm_round,
-                train_log_path,
-                f"DSGD_bz{bz}_ur{comm_round}_lr{lr}",
-                save_every,
-            )
+    for idx, (bz, lr, cr) in enumerate(params):
+        theta_D_SGD = dopt.D_SGD(
+            logis_model,
+            communication_matrix,
+            lr,
+            int(DEPOCH_base),
+            model_para,
+            bz,
+            cr,
+            train_log_path,
+            f"DSGD_bz{bz}_ur{cr}_lr{lr}",
+            save_every,
+        )
 
-            res_F_D_SGD = error_lr_0.cost_gap_path(np.sum(theta_D_SGD, axis=1) / node_num)
+        res_F_D_SGD = error_lr.cost_gap_path(np.sum(theta_D_SGD, axis=1) / node_num)
 
-            all_res_F_DSGD.append(res_F_D_SGD)
-            exp_names.append(f"bz{bz}_ur{comm_round}_lr{lr}")
-            legends.append(f"bz = {bz}, ur = {comm_round}, lr = {lr}")
+        all_res_F_DSGD.append(res_F_D_SGD)
+        exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
+        legends.append(f"bz = {bz}, ur = {cr}, lr = {lr}")
+        np.save(
+            f"{exp_save_path}/DSGD_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy",
+            theta_opt,
+        )
 
     save_npy(all_res_F_DSGD, exp_save_path, exp_names)
     plot_figure(
@@ -198,44 +250,56 @@ def DSGD_check():
     )
 
 
-def DRR_check():
+def DRR_check(
+    logis_model,
+    model_para,
+    D_lr,
+    D_batch_size,
+    DEPOCH_base,
+    communication_matrix,
+    communication_rounds,
+    exp_log_path,
+    save_every,
+    error_lr,
+    line_formats,
+    plot_every,
+):
     exp_save_path = f"{exp_log_path}/DRR"
     initDir(exp_save_path)
     train_log_path = f"{exp_save_path}/training"
     initDir(train_log_path)
 
     all_res_F_DRR = []
-    batch_sizes = [100]
-    update_rounds = [int(logis_model.data_distr[0] / bz) for bz in batch_sizes]
-    update_rounds = [1]
     exp_names = []
     legends = []
     params = []
-    for bz in batch_sizes:
+    for bz in D_batch_size:
         for lr in D_lr:
-            params.append((bz, lr))
-    # learning_rates = [C_lr * (bz/100) for bz in batch_sizes]
+            for cr in communication_rounds:
+                params.append((bz, lr, cr))
 
-    for idx, (bz, lr) in enumerate(params):
-        for comm_round in update_rounds:
-            comm_round = int(comm_round)
-            theta_D_RR = dopt.D_RR(
-                logis_model,
-                communication_matrix,
-                lr,
-                int(DEPOCH_base),
-                model_para_dis,
-                bz,
-                comm_round,
-                train_log_path,
-                f"DRR_bz{bz}_ur{comm_round}_lr{lr}",
-                save_every,
-            )
-            res_F_D_RR = error_lr_0.cost_gap_path(np.sum(theta_D_RR, axis=1) / node_num)
+    for idx, (bz, lr, cr) in enumerate(params):
+        theta_D_RR = dopt.D_RR(
+            logis_model,
+            communication_matrix,
+            lr,
+            int(DEPOCH_base),
+            model_para,
+            bz,
+            cr,
+            train_log_path,
+            f"DRR_bz{bz}_ur{cr}_lr{lr}",
+            save_every,
+        )
+        res_F_D_RR = error_lr.cost_gap_path(np.sum(theta_D_RR, axis=1) / node_num)
 
-            all_res_F_DRR.append(res_F_D_RR)
-            exp_names.append(f"bz{bz}_ur{comm_round}_lr{lr}")
-            legends.append(f"bz = {bz}, ur = {comm_round}, lr = {lr}")
+        all_res_F_DRR.append(res_F_D_RR)
+        exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
+        legends.append(f"bz = {bz}, ur = {cr}, lr = {lr}")
+        np.save(
+            f"{exp_save_path}/DRR_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy",
+            theta_opt,
+        )
 
     save_npy(all_res_F_DRR, exp_save_path, exp_names)
     plot_figure(
@@ -246,8 +310,72 @@ def DRR_check():
         plot_every,
     )
 
+print(f"{'-'*50}")
+print("Exponential Graph")
+print(f"node num = {node_num}")
+print(f"dim = {dim}")
+print(f"L = {L}")
+print(f"total train sample = {total_train_sample}")
+print(f"avg local sample {avg_local_sample}")
+print(f"CEPOCH base = {CEPOCH_base}")
+print(f"DEPOCH base {DEPOCH_base}")
+print(f"communication rounds = {communication_rounds}")
+print(f"C lr = {C_lr}")
+print(f"D lr = {D_lr}")
+print(f"C batch size = {C_batch_size}")
+print(f"D batch size = {D_batch_size}")
+print(f"{'-'*50}")
 
-CSGD_check()
-CRR_check()
-DSGD_check()
-DRR_check()
+# CSGD_check(
+#     logis_model,
+#     model_para_central,
+#     C_lr,
+#     C_batch_size,
+#     CEPOCH_base,
+#     exp_log_path,
+#     save_every,
+#     error_lr_0,
+#     line_formats,
+#     plot_every,
+# )
+# CRR_check(
+#     logis_model,
+#     model_para_central,
+#     C_lr,
+#     C_batch_size,
+#     CEPOCH_base,
+#     exp_log_path,
+#     save_every,
+#     error_lr_0,
+#     line_formats,
+#     plot_every,
+# )
+
+DSGD_check(
+    logis_model,
+    model_para_dis,
+    D_lr,
+    D_batch_size,
+    DEPOCH_base,
+    communication_matrix,
+    communication_rounds,
+    exp_log_path,
+    save_every,
+    error_lr_0,
+    line_formats,
+    plot_every,
+)
+DRR_check(
+    logis_model,
+    model_para_dis,
+    D_lr,
+    D_batch_size,
+    DEPOCH_base,
+    communication_matrix,
+    communication_rounds,
+    exp_log_path,
+    save_every,
+    error_lr_0,
+    line_formats,
+    plot_every,
+)
