@@ -6,3 +6,4 @@ NeuralNetwork/Optimizers/__pycache__
 NeuralNetwork/Problems/__pycache__
 mnist.npz
 .DS_Store
+launch.sh
