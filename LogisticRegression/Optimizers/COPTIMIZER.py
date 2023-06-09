@@ -44,7 +44,7 @@ def CGD(pr, learning_rate, K, theta_0):
     return theta, theta_opt, F_opt
 
 
-def SGD(pr, learning_rate, K, theta_0, batch_size, save_path, exp_name, save_every):
+def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, save_every):
     """
     Centralized mini-batch SGD Optimizer. This optimizer trains on all
     data globally in a batched manner.
@@ -75,6 +75,9 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, save_path, exp_name, save_eve
 
     start = time.time()
     for k in range(K):  # k local training rounds
+        if lr_dec:
+            learning_rate = 1 / ((k + 1)/100 + 2)
+
         temp = theta[-1]
         # gradient updates happening in one local training round
         for i in range(update_round):
@@ -103,7 +106,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, save_path, exp_name, save_eve
     return theta, theta_opt, F_opt
 
 
-def C_RR(pr, learning_rate, K, theta_0, batch_size, save_path, exp_name, save_every):
+def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, save_every):
     """
     Centralized Random Reshuflling Optimizer.
 
@@ -124,6 +127,9 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, save_path, exp_name, save_ev
 
     start = time.time()
     for k in range(K):
+        if lr_dec:
+            learning_rate = 1 / ((k + 1)/100 + 2)
+
         cnt = 0
         permutation = np.random.permutation(pr.N)
         temp = theta[-1]

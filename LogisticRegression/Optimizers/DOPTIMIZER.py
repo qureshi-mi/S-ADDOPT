@@ -20,6 +20,7 @@ def D_SGD(
     theta_0,
     batch_size,
     comm_round,
+    lr_dec,
     save_path,
     exp_name,
     save_every,
@@ -47,6 +48,8 @@ def D_SGD(
 
     for k in range(K):
         temp = theta[-1]
+        if lr_dec:
+            learning_rate = 1 / ((k + 1)/100 + 2)
 
         for i in range(update_round):
             sample_vec = [
@@ -91,6 +94,7 @@ def D_RR(
     theta_0,
     batch_size,
     comm_round,
+    lr_dec,
     save_path,
     exp_name,
     save_every,
@@ -123,10 +127,11 @@ def D_RR(
 
     for k in range(K):
         temp = theta[-1]
+        if lr_dec:
+            learning_rate = 1 / ((k + 1)/100 + 2)
+
         sample_vec = [np.random.permutation(prd.data_distr[i]) for i in range(prd.n)]
-
         for round in range(update_round):
-
             permutes = [
                 val[round * batch_size : (round + 1) * batch_size]
                 for i, val in enumerate(sample_vec)
