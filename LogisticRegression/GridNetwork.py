@@ -29,8 +29,8 @@ step_size = 1 / L / 2  ## selecting an appropriate step-size
 """
 Initializing variables
 """
-CEPOCH_base = 40000
-DEPOCH_base = 40000
+CEPOCH_base = 50000
+DEPOCH_base = 50000
 
 model_para_central = np.random.normal(0, 1, dim)
 model_para_dis = np.random.normal(0, 1, (node_num, dim))
@@ -38,8 +38,10 @@ undir_graph = Grid_graph(side_length).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
 communication_rounds = [1, 2, 5, 10, 15]
 
-C_lr = [0.01 / L]
-D_lr = [0.01 / L]  ## selecting an appropriate step-size
+C_lr = [0.01 / L * i/10 for i in range(1,14)]
+D_lr = [0.01 / L * i/10 for i in range(1,14)]  ## selecting an appropriate step-size
+C_lr_dec = False
+D_lr_dec = False
 C_batch_size = [50]
 D_batch_size = [50]
 
@@ -58,11 +60,11 @@ line_formats = [
     "-_r",
 ]
 exp_log_path = (
-    "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/grid_ur_lr01_epoch40000"
+    "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/DRR_robust_grid_graph/"
 )
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"
-plot_every = 250
-save_every = 2500
+plot_every = 2500
+save_every = 5000
 
 """
 Optimum solution
@@ -77,6 +79,7 @@ def CSGD_check(
     logis_model,
     model_para,
     C_lr,
+    C_lr_dec,
     C_batch_size,
     CEPOCH_base,
     exp_log_path,
@@ -103,6 +106,7 @@ def CSGD_check(
             CEPOCH_base,
             model_para,
             bz,
+            C_lr_dec,
             train_log_path,
             f"CSGD_bz{bz}_lr{lr:.3f}_check",
             save_every,
@@ -129,6 +133,7 @@ def CRR_check(
     logis_model,
     model_para,
     C_lr,
+    C_lr_dec,
     C_batch_size,
     CEPOCH_base,
     exp_log_path,
@@ -155,6 +160,7 @@ def CRR_check(
             CEPOCH_base,
             model_para,
             bz,
+            C_lr_dec,
             train_log_path,
             f"CRR_bz{bz}_lr{lr}_check",
             save_every,
@@ -186,6 +192,7 @@ def DSGD_check(
     logis_model,
     model_para,
     D_lr,
+    D_lr_dec,
     D_batch_size,
     DEPOCH_base,
     communication_matrix,
@@ -219,6 +226,7 @@ def DSGD_check(
             model_para,
             bz,
             cr,
+            D_lr_dec,
             train_log_path,
             f"DSGD_bz{bz}_ur{cr}_lr{lr}",
             save_every,
@@ -249,6 +257,7 @@ def DRR_check(
     logis_model,
     model_para,
     D_lr,
+    D_lr_dec,
     D_batch_size,
     DEPOCH_base,
     communication_matrix,
@@ -282,6 +291,7 @@ def DRR_check(
             model_para,
             bz,
             cr,
+            D_lr_dec,
             train_log_path,
             f"DRR_bz{bz}_ur{cr}_lr{lr}",
             save_every,
@@ -321,35 +331,38 @@ print(f"C batch size = {C_batch_size}")
 print(f"D batch size = {D_batch_size}")
 print(f"{'-'*50}")
 
-# CSGD_check(
-#     logis_model,
-#     model_para_central,
-#     C_lr,
-#     C_batch_size,
-#     CEPOCH_base,
-#     exp_log_path,
-#     save_every,
-#     error_lr_0,
-#     line_formats,
-#     plot_every,
-# )
-# CRR_check(
-#     logis_model,
-#     model_para_central,
-#     C_lr,
-#     C_batch_size,
-#     CEPOCH_base,
-#     exp_log_path,
-#     save_every,
-#     error_lr_0,
-#     line_formats,
-#     plot_every,
-# )
+CSGD_check(
+    logis_model,
+    model_para_central,
+    C_lr,
+    C_lr_dec,
+    C_batch_size,
+    CEPOCH_base,
+    exp_log_path,
+    save_every,
+    error_lr_0,
+    line_formats,
+    plot_every,
+)
+CRR_check(
+    logis_model,
+    model_para_central,
+    C_lr,
+    C_lr_dec,
+    C_batch_size,
+    CEPOCH_base,
+    exp_log_path,
+    save_every,
+    error_lr_0,
+    line_formats,
+    plot_every,
+)
 
 DSGD_check(
     logis_model,
     model_para_dis,
     D_lr,
+    D_lr_dec,
     D_batch_size,
     DEPOCH_base,
     communication_matrix,
@@ -364,6 +377,7 @@ DRR_check(
     logis_model,
     model_para_dis,
     D_lr,
+    D_lr_dec,
     D_batch_size,
     DEPOCH_base,
     communication_matrix,
