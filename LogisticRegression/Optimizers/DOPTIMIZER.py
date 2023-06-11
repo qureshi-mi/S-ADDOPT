@@ -8,7 +8,7 @@ import utilities as ut
 from numpy import linalg as LA
 import time
 import math
-from utilities import plot_figure, save_npy, save_state, load_state
+from utilities import save_npy, save_state, load_state, plot_figure_data
 from analysis import error
 
 
@@ -72,7 +72,7 @@ def D_SGD(
             # save_state(theta, save_path, exp_name)
             avg_theta = np.sum(theta[-1], axis=0) / prd.n
             error_lr = error(prd, avg_theta, prd.F_val(avg_theta))
-            plot_figure(
+            plot_figure_data(
                 [error_lr.cost_gap_path(np.sum(theta, axis=1) / prd.n)],
                 ["-vb"],
                 [f"{exp_name}{k}"],
@@ -151,7 +151,7 @@ def D_RR(
             # save_state(theta, save_path, exp_name)
             avg_theta = np.sum(theta[-1], axis=0) / prd.n
             error_lr = error(prd, avg_theta, prd.F_val(avg_theta))
-            plot_figure(
+            plot_figure_data(
                 [error_lr.cost_gap_path(np.sum(theta, axis=1) / prd.n)],
                 ["-vb"],
                 [f"{exp_name}{k}"],

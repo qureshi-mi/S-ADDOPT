@@ -13,7 +13,7 @@ import os
 
 def monitor(name, current, total):
     if (current + 1) % (total / 10) == 0:
-        print(name + " %d%% completed" % int(100 * (current + 1) / total))
+        print(name + " %d%% completed" % int(100 * (current + 1) / total), flush=True)
 
 
 def nx_options():
@@ -34,8 +34,8 @@ def save_npy(npys, root_path, exp_name):
         np.save(f"{root_path}/{exp_name[i]}.npy", array)
 
 
-def plot_figure(data, formats, legend, save_path, plot_every):
-    print("plotting the figure...")
+def plot_figure_path(exp_save_path, exp_names, formats, legend, save_path, plot_every):
+    print("plotting the figure...", flush=True)
     plt.clf()
     mark_every = 1
     font = FontProperties()
@@ -44,12 +44,18 @@ def plot_figure(data, formats, legend, save_path, plot_every):
     font2.set_size(10)
     plt.figure(3)
 
-    for i, line in enumerate(data):
+    for i, name in enumerate(exp_names):
+        line = np.load(f"{exp_save_path}/{name}")
         xaxis = np.linspace(0, len(line)-1, num=len(line), dtype=int)
         yaxis = [abs(point) for point in  line[::plot_every]]   # the F_val could be negative
-        plt.plot(
-            xaxis[::plot_every], yaxis, formats[i], markevery=mark_every
-        )
+        if i >= len(formats):
+            plt.plot(
+                xaxis[::plot_every], yaxis, markevery=mark_every
+            )
+        else:
+            plt.plot(
+                xaxis[::plot_every], yaxis, formats[i], markevery=mark_every
+            )
 
     plt.legend(legend, prop=font2)
     plt.grid(True)
@@ -61,6 +67,37 @@ def plot_figure(data, formats, legend, save_path, plot_every):
     plt.savefig(save_path, format="pdf", dpi=4000, bbox_inches="tight")
     print("figure plotted...")
 
+def plot_figure_data(data, formats, legend, save_path, plot_every):
+    print("plotting the figure...", flush=True)
+    plt.clf()
+    mark_every = 1
+    font = FontProperties()
+    font.set_size(18)
+    font2 = FontProperties()
+    font2.set_size(10)
+    plt.figure(3)
+
+    for i, line in enumerate(data):
+        xaxis = np.linspace(0, len(line)-1, num=len(line), dtype=int)
+        yaxis = [abs(point) for point in  line[::plot_every]]   # the F_val could be negative
+        if i >= len(formats):
+            plt.plot(
+                xaxis[::plot_every], yaxis, markevery=mark_every
+            )
+        else:
+            plt.plot(
+                xaxis[::plot_every], yaxis, formats[i], markevery=mark_every
+            )
+
+    plt.legend(legend, prop=font2)
+    plt.grid(True)
+    plt.yscale("log")
+    plt.tick_params(labelsize="large", width=3)
+    plt.title("MNIST", fontproperties=font)
+    plt.xlabel("Epochs", fontproperties=font)
+    plt.ylabel("Optimality Gap", fontproperties=font)
+    plt.savefig(save_path, format="pdf", dpi=4000, bbox_inches="tight")
+    print("figure plotted...")
 
 def save_state(theta, save_path, exp_name):
     print("saving experiment results...")

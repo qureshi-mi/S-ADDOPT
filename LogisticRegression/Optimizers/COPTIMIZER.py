@@ -7,7 +7,7 @@ import copy as cp
 import utilities as ut
 import time
 import math
-from utilities import plot_figure, save_npy, save_state, load_state
+from utilities import save_npy, save_state, load_state, plot_figure_data
 from analysis import error
 
 
@@ -91,7 +91,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
         if k % save_every == 0:
             # save_state(theta, save_path, exp_name)
             error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
-            plot_figure(
+            plot_figure_data(
                 [error_lr.cost_gap_path(theta)],
                 ["-vb"],
                 [f"{exp_name}{k}"],
@@ -144,7 +144,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
         if k % save_every == 0:
             # save_state(theta, save_path, exp_name)
             error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
-            plot_figure(
+            plot_figure_data(
                 [error_lr.cost_gap_path(theta)],
                 ["-vb"],
                 [f"{exp_name}{k}"],
