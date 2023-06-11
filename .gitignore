@@ -7,3 +7,4 @@ NeuralNetwork/Problems/__pycache__
 mnist.npz
 .DS_Store
 launch.sh
+kill_task.sh
