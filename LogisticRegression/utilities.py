@@ -4,6 +4,7 @@
 
 ## Used to pre-set networkx-class properties
 
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
@@ -11,9 +12,13 @@ from analysis import error
 import os
 
 
-def monitor(name, current, total):
+def monitor(name, current, total, start_time):
     if (current + 1) % (total / 10) == 0:
         print(name + " %d%% completed" % int(100 * (current + 1) / total), flush=True)
+        print(f"Time Span: {time.time() - start_time}", flush=True)
+        return time.time()
+    else:
+        return start_time
 
 
 def nx_options():

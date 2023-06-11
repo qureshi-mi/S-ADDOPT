@@ -74,6 +74,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
     print(f"update round {update_round} | pr.N {pr.N}")
 
     start = time.time()
+    track_time = start
     for k in range(K):  # k local training rounds
         if lr_dec:
             learning_rate = 1 / ((k + 1)/100 + 2)
@@ -87,7 +88,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
             )
 
         theta.append(temp)
-        ut.monitor("SGD", k, K)
+        ut.monitor("SGD", k, K, track_time)
         if k % save_every == 0:
             # save_state(theta, save_path, exp_name)
             error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
@@ -126,6 +127,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
     theta = [theta_copy]
 
     start = time.time()
+    track_time = start
     for k in range(K):
         if lr_dec:
             learning_rate = 1 / ((k + 1)/100 + 2)
@@ -139,7 +141,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
             )
             cnt = cnt + batch_size
 
-        ut.monitor("C_RR", k, K)
+        ut.monitor("C_RR", k, K, track_time)
         theta.append(temp)
         if k % save_every == 0:
             # save_state(theta, save_path, exp_name)

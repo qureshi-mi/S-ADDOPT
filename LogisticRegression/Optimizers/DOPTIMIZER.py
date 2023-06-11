@@ -45,6 +45,7 @@ def D_SGD(
 
     update_round = math.ceil(len(prd.X[0]) / batch_size)
     start = time.time()
+    track_time = start
 
     for k in range(K):
         temp = theta[-1]
@@ -65,7 +66,7 @@ def D_SGD(
                     weight, temp
                 )  # this probably caused significant performance drop
 
-        ut.monitor("D_SGD", k, K)
+        ut.monitor("D_SGD", k, K, track_time)
         theta.append(cp.deepcopy(temp))
 
         if k % save_every == 0 or k + 1 == K:
@@ -124,6 +125,7 @@ def D_RR(
     node_num = prd.n
     update_round = math.ceil(len(prd.X[0]) / batch_size)
     start = time.time()
+    track_time = start
 
     for k in range(K):
         temp = theta[-1]
@@ -144,7 +146,7 @@ def D_RR(
                 # averaging from neighbours
                 temp = np.matmul(weight, temp)
 
-        ut.monitor("D_RR", k, K)
+        ut.monitor("D_RR", k, K, track_time)
         theta.append(cp.deepcopy(temp))
 
         if k % save_every == 0 or k + 1 == K:
