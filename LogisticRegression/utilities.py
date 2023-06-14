@@ -114,6 +114,9 @@ def load_state(save_path, exp_name):
     theta = np.load(f"{save_path}/{exp_name}_theta.npy")
     return theta, theta[-1]  # return the state sequence and the last state (optimum)
 
+def load_optimal(save_path, exp_name):
+    return np.load(save_path, exp_name)
+    
 def loadPathAndPlot(save_path, exp_names, error_lr, plot_every):
     load_thetas = []
     print("loading theta training results...")
