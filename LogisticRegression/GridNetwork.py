@@ -31,8 +31,8 @@ step_size = 1 / L / 2  ## selecting an appropriate step-size
 """
 Initializing variables
 """
-CEPOCH_base = 40000
-DEPOCH_base = 40000
+CEPOCH_base = 20000
+DEPOCH_base = 20000
 
 model_para_central = np.random.normal(0, 1, dim)
 model_para_dis = np.random.normal(0, 1, (node_num, dim))
@@ -40,8 +40,8 @@ undir_graph = Grid_graph(side_length).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
 communication_rounds = [1]
 
-C_lr = [0.1 / L * i / 10 for i in range(1, 14)]
-D_lr = [0.1 / L * i / 10 for i in range(1, 14)]  ## selecting an appropriate step-size
+C_lr = [0.1 / L * i / 10 for i in range(1, 14, 2)]
+D_lr = [0.1 / L * i / 10 for i in range(1, 14, 2)]
 C_lr_dec = False
 D_lr_dec = False
 C_batch_size = [50, 100, 200]
@@ -61,7 +61,7 @@ line_formats = [
     "-|y",
     "-_r",
 ]
-exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/DRR_robust_grid_graph/"
+exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/drr_robust_grid"
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"
 plot_every = 2500
 save_every = 5000
