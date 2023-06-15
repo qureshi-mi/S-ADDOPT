@@ -6,6 +6,7 @@
 
 import os
 import time
+import copy as cp
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -16,7 +17,7 @@ from Problems.logistic_regression import LR_L2
 from Problems.log_reg_cifar import LR_L4
 from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
-from utilities import plot_figure_path, save_npy, save_state, load_state, initDir
+from utilities import plot_figure_path, save_npy, save_state, load_state, initDir, load_optimal
 
 ########################################################################################################################
 ####----------------------------------------------MNIST Classification----------------------------------------------####
@@ -38,8 +39,8 @@ avg_local_sample = logis_model.b  ## average number of local samples
 """
 Initializing variables
 """
-CEPOCH_base = 20000
-DEPOCH_base = 20000
+CEPOCH_base = 40000
+DEPOCH_base = 40000
 
 model_para_central = np.random.normal(0, 1, dim)
 model_para_dis = np.random.normal(0, 1, (node_num, dim))
@@ -47,12 +48,14 @@ undir_graph = Exponential_graph(node_num).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
 communication_rounds = [1]
 
-C_lr = [0.1 / L * i/10 for i in range(1,14,2)]
-D_lr = [0.1 / L * i/10 for i in range(1,14,2)]
-C_lr_dec = False
+C_lr = [0.05]
+D_lr = [0.05]
+C_batch_size = [12000]
+D_batch_size = [50]
+C_lr_dec = True
 D_lr_dec = False
-C_batch_size = [50,100,200]
-D_batch_size = [50,100,200]
+C_train_load = False
+D_train_load = False
 
 line_formats = [
     "-vb",
@@ -68,9 +71,9 @@ line_formats = [
     "-|y",
     "-_r",
 ]
-exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/drr_robust"
+exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimal_CRR12000"
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"
-plot_every = 2500
+plot_every = 500
 save_every = 5000
 
 """
@@ -94,20 +97,25 @@ def CSGD_check(
     error_lr,
     line_formats,
     plot_every,
+    train_load,
 ):
     exp_save_path = f"{exp_log_path}/central_SGD"
     initDir(exp_save_path)
     train_log_path = f"{exp_save_path}/training"
     initDir(train_log_path)
 
+    model_para_cp = cp.deepcopy(model_para)
     params = []
     for bz in C_batch_size:
         for lr in C_lr:
             params.append((bz, lr))
 
     for idx, (bz, lr) in enumerate(params):
+        model_para = model_para_cp
         if os.path.exists(f"{exp_save_path}/CSGD_gap_bz{bz}_lr{lr:.6f}.npy"):
             continue
+        if train_load:
+            model_para = load_optimal(exp_save_path, f"CSGD_opt_theta_bz{bz}_lr{lr:.6f}.npy")
 
         theta_SGD, theta_opt, F_opt = copt.SGD(
             logis_model,
@@ -146,20 +154,26 @@ def CRR_check(
     error_lr,
     line_formats,
     plot_every,
+    train_load,
 ):
     exp_save_path = f"{exp_log_path}/central_CRR"
     initDir(exp_save_path)
     train_log_path = f"{exp_save_path}/training"
     initDir(train_log_path)
 
+    model_para_cp = cp.deepcopy(model_para)
     params = []
     for bz in C_batch_size:
         for lr in C_lr:
             params.append((bz, lr))
 
     for idx, (bz, lr) in enumerate(params):
+        model_para = model_para_cp
         if os.path.exists(f"{exp_save_path}/CRR_gap_bz{bz}_lr{lr:.6f}.npy"):
             continue
+        if train_load:
+            model_para = load_optimal(exp_save_path, f"CRR_opt_theta_bz{bz}_lr{lr:.6f}.npy")
+
         theta_CRR, theta_opt, F_opt = copt.C_RR(
             logis_model,
             lr,
@@ -204,12 +218,14 @@ def DSGD_check(
     error_lr,
     line_formats,
     plot_every,
+    train_load,
 ):
     exp_save_path = f"{exp_log_path}/DSGD"
     initDir(exp_save_path)
     train_log_path = f"{exp_save_path}/training"
     initDir(train_log_path)
 
+    model_para_cp = cp.deepcopy(model_para)
     exp_names = []
     legends = []
     params = []
@@ -219,8 +235,11 @@ def DSGD_check(
                 params.append((bz, lr, cr))
 
     for idx, (bz, lr, cr) in enumerate(params):
+        model_para = model_para_cp
         if os.path.exists(f"{exp_save_path}/DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy"):
             continue
+        if train_load:
+            model_para = load_optimal(exp_save_path, f"DSGD_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy")
 
         theta_D_SGD = dopt.D_SGD(
             logis_model,
@@ -273,12 +292,14 @@ def DRR_check(
     error_lr,
     line_formats,
     plot_every,
+    train_load,
 ):
     exp_save_path = f"{exp_log_path}/DRR"
     initDir(exp_save_path)
     train_log_path = f"{exp_save_path}/training"
     initDir(train_log_path)
 
+    model_para_cp = cp.deepcopy(model_para)
     exp_names = []
     legends = []
     params = []
@@ -288,8 +309,11 @@ def DRR_check(
                 params.append((bz, lr, cr))
 
     for idx, (bz, lr, cr) in enumerate(params):
+        model_para = model_para_cp
         if os.path.exists(f"{exp_save_path}/DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy"):
             continue
+        if train_load:
+            model_para = load_optimal(exp_save_path, f"DRR_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy")
 
         theta_D_RR = dopt.D_RR(
             logis_model,
@@ -343,21 +367,22 @@ print(f"D batch size = {D_batch_size}")
 print(f"{'-'*50}", flush=True)
 start = time.time()
 
-print()
-print("CSGD")
-CSGD_check(
-    logis_model,
-    model_para_central,
-    C_lr,
-    C_lr_dec,
-    C_batch_size,
-    CEPOCH_base,
-    exp_log_path,
-    save_every,
-    error_lr_0,
-    line_formats,
-    plot_every,
-)
+# print()
+# print("CSGD")
+# CSGD_check(
+#     logis_model,
+#     model_para_central,
+#     C_lr,
+#     C_lr_dec,
+#     C_batch_size,
+#     CEPOCH_base,
+#     exp_log_path,
+#     save_every,
+#     error_lr_0,
+#     line_formats,
+#     plot_every,
+#     C_train_load,
+# )
 print()
 print("CRR")
 CRR_check(
@@ -372,42 +397,45 @@ CRR_check(
     error_lr_0,
     line_formats,
     plot_every,
+    C_train_load,
 )
 
-print()
-print("DSGD")
-DSGD_check(
-    logis_model,
-    model_para_dis,
-    D_lr,
-    D_lr_dec,
-    D_batch_size,
-    DEPOCH_base,
-    communication_matrix,
-    communication_rounds,
-    exp_log_path,
-    save_every,
-    error_lr_0,
-    line_formats,
-    plot_every,
-)
-print()
-print("DRR")
-DRR_check(
-    logis_model,
-    model_para_dis,
-    D_lr,
-    D_lr_dec,
-    D_batch_size,
-    DEPOCH_base,
-    communication_matrix,
-    communication_rounds,
-    exp_log_path,
-    save_every,
-    error_lr_0,
-    line_formats,
-    plot_every,
-)
+# print()
+# print("DSGD")
+# DSGD_check(
+#     logis_model,
+#     model_para_dis,
+#     D_lr,
+#     D_lr_dec,
+#     D_batch_size,
+#     DEPOCH_base,
+#     communication_matrix,
+#     communication_rounds,
+#     exp_log_path,
+#     save_every,
+#     error_lr_0,
+#     line_formats,
+#     plot_every,
+#     D_train_load
+# )
+# print()
+# print("DRR")
+# DRR_check(
+#     logis_model,
+#     model_para_dis,
+#     D_lr,
+#     D_lr_dec,
+#     D_batch_size,
+#     DEPOCH_base,
+#     communication_matrix,
+#     communication_rounds,
+#     exp_log_path,
+#     save_every,
+#     error_lr_0,
+#     line_formats,
+#     plot_every,
+#     D_train_load
+# )
 
 end = time.time()
 print(f"{'-'*50}")
