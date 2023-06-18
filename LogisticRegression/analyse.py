@@ -9,7 +9,7 @@ from utilities import (
 )
 from Problems.logistic_regression import LR_L2
 
-exp_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/drr_robust_grid"
+exp_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/opt_CRR_reg01"
 line_formats = [
     "-vb",
     "-^m",
@@ -24,11 +24,11 @@ line_formats = [
     "-|y",
     "-_r",
 ]
-plot_every = 2500
+plot_every = 500
 
 L = 0.12005882830300582
-lrs = [0.1 / L * i / 10 for i in range(1, 14, 2)]
-batch_size = [50, 100, 200]
+lrs = [0.01]
+batch_size = [12000]
 update_round = [1]
 exp_names = []
 legends = []
@@ -53,6 +53,6 @@ for idx, bz in enumerate(batch_size):
         exp_names,
         line_formats,
         legends,
-        f"{exp_path}/convergence_CRR_bz{bz}_grid.pdf",
+        f"{exp_path}/convergence_CRR_bz{bz}.pdf",
         plot_every,
     )

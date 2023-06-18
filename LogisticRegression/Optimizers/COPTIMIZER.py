@@ -93,7 +93,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
             # save_state(theta, save_path, exp_name)
             error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
             plot_figure_data(
-                [error_lr.cost_gap_path(theta)],
+                [error_lr.cost_gap_path(theta, gap_type="theta")],
                 ["-vb"],
                 [f"{exp_name}{k}"],
                 f"{save_path}/{exp_name}{k}.pdf",
@@ -130,7 +130,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
     track_time = start
     for k in range(K):
         if lr_dec:
-            learning_rate = 1 / ((k + 1)/100 + 2)
+            learning_rate = 1 / ((k + 1)/10 + 2)
 
         cnt = 0
         permutation = np.random.permutation(pr.N)
@@ -147,7 +147,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
             # save_state(theta, save_path, exp_name)
             error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
             plot_figure_data(
-                [error_lr.cost_gap_path(theta)],
+                [error_lr.cost_gap_path(theta, gap_type="theta")],
                 ["-vb"],
                 [f"{exp_name}{k}"],
                 f"{save_path}/{exp_name}{k}.pdf",
