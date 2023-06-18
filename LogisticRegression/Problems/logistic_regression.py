@@ -39,7 +39,7 @@ class LR_L2( object ):
         self.p = len(self.X_train[0])         ## dimension of the feature 
         print(f"feat dim {self.p }")
 
-        self.reg = 1/self.N
+        self.reg = 0.2 / 2
         self.dim = self.p                     ## dimension of the feature 
         self.L, self.kappa = self.smooth_scvx_parameters()
         self.b = int(self.N/self.n)           ## average local samples
