@@ -109,10 +109,14 @@ def save_state(theta, save_path, exp_name):
     np.save(f"{save_path}/{exp_name}_theta", theta)
 
 
-def load_state(save_path, exp_name):
+def load_state(save_path, exp_name, type="optimal"):
     print("loading experiment results...")
-    theta = np.load(f"{save_path}/{exp_name}_theta.npy")
-    return theta, theta[-1]  # return the state sequence and the last state (optimum)
+    if type == "path":
+        theta = np.load(f"{save_path}/{exp_name}_theta_path.npy")
+        return theta, theta[-1]  # return the state sequence and the last state (optimum)
+    elif type == "optimal":
+        theta = np.load(f"{save_path}/{exp_name}_theta_optimal.npy")
+        return None, theta  # return the last state (optimum)
 
 def load_optimal(save_path, exp_name):
     return np.load(f"{save_path}/{exp_name}")
