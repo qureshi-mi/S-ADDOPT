@@ -74,7 +74,7 @@ def D_SGD(
             avg_theta = np.sum(theta[-1], axis=0) / prd.n
             error_lr = error(prd, avg_theta, prd.F_val(avg_theta))
             plot_figure_data(
-                [error_lr.cost_gap_path(np.sum(theta, axis=1) / prd.n)],
+                [error_lr.cost_gap_path(np.sum(theta, axis=1) / prd.n, gap_type="F")],
                 ["-vb"],
                 [f"{exp_name}{k}"],
                 f"{save_path}/{exp_name}_{k}.pdf",
@@ -154,7 +154,7 @@ def D_RR(
             avg_theta = np.sum(theta[-1], axis=0) / prd.n
             error_lr = error(prd, avg_theta, prd.F_val(avg_theta))
             plot_figure_data(
-                [error_lr.cost_gap_path(np.sum(theta, axis=1) / prd.n)],
+                [error_lr.cost_gap_path(np.sum(theta, axis=1) / prd.n, gap_type="F")],
                 ["-vb"],
                 [f"{exp_name}{k}"],
                 f"{save_path}/{exp_name}_{k}.pdf",
