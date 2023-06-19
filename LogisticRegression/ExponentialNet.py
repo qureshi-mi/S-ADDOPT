@@ -19,6 +19,8 @@ from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
 from utilities import plot_figure_path, save_npy, save_state, load_state, initDir, load_optimal
 
+np.random.seed(0)
+
 ########################################################################################################################
 ####----------------------------------------------MNIST Classification----------------------------------------------####
 ########################################################################################################################
@@ -39,25 +41,27 @@ avg_local_sample = logis_model.b  ## average number of local samples
 """
 Initializing variables
 """
-CEPOCH_base = 40000
-DEPOCH_base = 40000
+CEPOCH_base = 2 # number of epochs for central algorithms
+DEPOCH_base = 2 # number of epochs for decentralized algorithms
 
-model_para_central = np.random.normal(0, 1, dim)
-model_para_dis = np.random.normal(0, 1, (node_num, dim))
-undir_graph = Exponential_graph(node_num).undirected()
-communication_matrix = Weight_matrix(undir_graph).column_stochastic()
-communication_rounds = [1]
+model_para_central = np.random.normal(0, 1, dim) # initialize the model parameter for central algorithms
+# model_para_dis = np.random.normal(0, 1, (node_num, dim)) # initialize the model parameter for decentralized algorithms
+model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
+undir_graph = Exponential_graph(node_num).undirected() # generate the undirected graph
+communication_matrix = Weight_matrix(undir_graph).column_stochastic() # generate the communication matrix
+communication_rounds = [1] # list of number of communication rounds for decentralized algorithms experiments
 
-C_lr = [0.05]
-D_lr = [0.05]
-C_batch_size = [12000]
-D_batch_size = [50]
-C_lr_dec = True
-D_lr_dec = False
-C_train_load = False
-D_train_load = False
+C_lr = [1/8000] # list of learning rate for central algorithms experiments
+D_lr = [1/8000] # list of learning rate for decentralized algorithms experiments
+C_batch_size = [10, 50, 200] # list of batch size for central algorithms experiments
+D_batch_size = [10, 50, 200] # list of batch size for decentralized algorithms experiments
+C_lr_dec = False # whether to decay the learning rate for central algorithms
+D_lr_dec = False # whether to decay the learning rate for decentralized algorithms
+C_train_load = False # whether to load the optimal model parameter for central algorithms
+D_train_load = False # whether to load the optimal model parameter for decentralized algorithms
+save_theta_path = False # whether to save the model parameter training path for central and decentralized algorithms
 
-line_formats = [
+line_formats = [ # list of line formats for plotting
     "-vb",
     "-^m",
     "-dy",
@@ -71,18 +75,18 @@ line_formats = [
     "-|y",
     "-_r",
 ]
-exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimal_CRR12000"
-ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"
-plot_every = 500
-save_every = 5000
+exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/same_init_and_first_distance_then_avg" # path to save the experiment results
+ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum" # path to load the optimal model parameter
+plot_every = 250 # plot every 250 epochs
+save_every = 5000 # save the model parameter every 5000 epochs
 
 """
 Optimum solution
 """
 if ckp_load_path is not None:
-    theta_CSGD_0, theta_opt = load_state(ckp_load_path, "optimum")
+    theta_CSGD_0, theta_opt = load_state(ckp_load_path, "optimum", "optimal")
 theta_CSGD_0 = None
-error_lr_0 = error(logis_model, theta_opt, logis_model.F_val(theta_opt))
+error_lr_0 = error(logis_model, theta_opt, logis_model.F_val(theta_opt)) # instantiate the error class
 
 
 def CSGD_check(
@@ -98,6 +102,7 @@ def CSGD_check(
     line_formats,
     plot_every,
     train_load,
+    save_theta_path,
 ):
     exp_save_path = f"{exp_log_path}/central_SGD"
     initDir(exp_save_path)
@@ -128,16 +133,31 @@ def CSGD_check(
             f"CSGD_bz{bz}_lr{lr:.3f}_check",
             save_every,
         )
-        res_F_SGD = error_lr.cost_gap_path(theta_SGD)
+
         np.save(f"{exp_save_path}/CSGD_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
-        np.save(f"{exp_save_path}/CSGD_gap_bz{bz}_lr{lr:.6f}.npy", res_F_SGD)
+
+        res_F_SGD = error_lr.cost_gap_path(theta_SGD, gap_type="theta")
+        np.save(f"{exp_save_path}/CSGD_gap_bz{bz}_lr{lr:.6f}_theta.npy", res_F_SGD)
+        res_F_SGD_F = error_lr.cost_gap_path(theta_SGD, gap_type="F")
+        np.save(f"{exp_save_path}/CSGD_gap_bz{bz}_lr{lr:.6f}_F.npy", res_F_SGD_F)
+
+        if save_theta_path:
+            np.save(f"{exp_save_path}/CSGD_theta_bz{bz}_lr{lr:.6f}.npy", theta_SGD)
 
     plot_figure_path(
         exp_save_path,
-        [f"CSGD_gap_bz{bz}_lr{lr:.6f}.npy" for idx, (bz, lr) in enumerate(params)],
+        [f"CSGD_gap_bz{bz}_lr{lr:.6f}_theta.npy" for idx, (bz, lr) in enumerate(params)],
         line_formats,
         [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)] + ["CGD"],
-        f"{exp_save_path}/convergence_SGD.pdf",
+        f"{exp_save_path}/convergence_SGD_theta.pdf",
+        plot_every,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [f"CSGD_gap_bz{bz}_lr{lr:.6f}_F.npy" for idx, (bz, lr) in enumerate(params)],
+        line_formats,
+        [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)] + ["CGD"],
+        f"{exp_save_path}/convergence_SGD_F.pdf",
         plot_every,
     )
 
@@ -155,6 +175,7 @@ def CRR_check(
     line_formats,
     plot_every,
     train_load,
+    save_theta_path,
 ):
     exp_save_path = f"{exp_log_path}/central_CRR"
     initDir(exp_save_path)
@@ -185,16 +206,30 @@ def CRR_check(
             f"CRR_bz{bz}_lr{lr}_check",
             save_every,
         )
-        res_F_CRR = error_lr.cost_gap_path(theta_CRR)
         np.save(f"{exp_save_path}/CRR_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
-        np.save(f"{exp_save_path}/CRR_gap_bz{bz}_lr{lr:.6f}.npy", res_F_CRR)
+
+        res_F_CRR = error_lr.cost_gap_path(theta_CRR, gap_type="theta")
+        np.save(f"{exp_save_path}/CRR_gap_bz{bz}_lr{lr:.6f}_theta.npy", res_F_CRR)
+        res_F_CRR_F = error_lr.cost_gap_path(theta_CRR, gap_type="F")
+        np.save(f"{exp_save_path}/CRR_gap_bz{bz}_lr{lr:.6f}_F.npy", res_F_CRR_F)
+
+        if save_theta_path:
+            np.save(f"{exp_save_path}/CRR_theta_bz{bz}_lr{lr:.6f}.npy", theta_CRR)
 
     plot_figure_path(
         exp_save_path,
-        [f"CRR_gap_bz{bz}_lr{lr:.6f}.npy" for idx, (bz, lr) in enumerate(params)],
+        [f"CRR_gap_bz{bz}_lr{lr:.6f}_theta.npy" for idx, (bz, lr) in enumerate(params)],
         line_formats,
         [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)],
-        f"{exp_save_path}/convergence_CRR.pdf",
+        f"{exp_save_path}/convergence_CRR_theta.pdf",
+        plot_every,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [f"CRR_gap_bz{bz}_lr{lr:.6f}_F.npy" for idx, (bz, lr) in enumerate(params)],
+        line_formats,
+        [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)],
+        f"{exp_save_path}/convergence_CRR_F.pdf",
         plot_every,
     )
 
@@ -219,6 +254,7 @@ def DSGD_check(
     line_formats,
     plot_every,
     train_load,
+    save_theta_path,
 ):
     exp_save_path = f"{exp_log_path}/DSGD"
     initDir(exp_save_path)
@@ -255,25 +291,41 @@ def DSGD_check(
             save_every,
         )
 
-        res_F_D_SGD = error_lr.cost_gap_path(np.sum(theta_D_SGD, axis=1) / node_num)
-
         exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
         legends.append(f"bz = {bz}, ur = {cr}, lr = {lr}")
         np.save(
             f"{exp_save_path}/DSGD_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy",
             theta_opt,
         )
+
+        res_F_D_SGD = error_lr.cost_gap_path(theta_D_SGD, gap_type="theta")
         np.save(
-            f"{exp_save_path}/DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy",
+            f"{exp_save_path}/DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy",
             res_F_D_SGD,
         )
+        res_F_D_SGD_F = error_lr.cost_gap_path(theta_D_SGD, gap_type="F")
+        np.save(
+            f"{exp_save_path}/DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy",
+            res_F_D_SGD_F,
+        )
+
+        if save_theta_path:
+            np.save(f"{exp_save_path}/DSGD_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy", theta_D_SGD)
 
     plot_figure_path(
         exp_save_path,
-        [f"DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy" for idx, (bz, lr, cr) in enumerate(params)],
+        [f"DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy" for idx, (bz, lr, cr) in enumerate(params)],
         line_formats,
         legends,
-        f"{exp_save_path}/convergence_DSGD.pdf",
+        f"{exp_save_path}/convergence_DSGD_theta.pdf",
+        plot_every,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [f"DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy" for idx, (bz, lr, cr) in enumerate(params)],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_DSGD_F.pdf",
         plot_every,
     )
 
@@ -293,6 +345,7 @@ def DRR_check(
     line_formats,
     plot_every,
     train_load,
+    save_theta_path,
 ):
     exp_save_path = f"{exp_log_path}/DRR"
     initDir(exp_save_path)
@@ -328,7 +381,6 @@ def DRR_check(
             f"DRR_bz{bz}_ur{cr}_lr{lr}",
             save_every,
         )
-        res_F_D_RR = error_lr.cost_gap_path(np.sum(theta_D_RR, axis=1) / node_num)
 
         exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
         legends.append(f"bz = {bz}, ur = {cr}, lr = {lr}")
@@ -336,17 +388,35 @@ def DRR_check(
             f"{exp_save_path}/DRR_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy",
             theta_opt,
         )
+
+        res_F_D_RR = error_lr.cost_gap_path(theta_D_RR, gap_type="theta")
         np.save(
-            f"{exp_save_path}/DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy",
+            f"{exp_save_path}/DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy",
             res_F_D_RR,
         )
+        res_F_D_RR_F = error_lr.cost_gap_path(theta_D_RR, gap_type="F")
+        np.save(
+            f"{exp_save_path}/DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy",
+            res_F_D_RR_F,
+        )
+
+        if save_theta_path:
+            np.save(f"{exp_save_path}/DRR_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy", theta_D_RR)
 
     plot_figure_path(
         exp_save_path,
-        [f"DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy" for idx, (bz, lr, cr) in enumerate(params)],
+        [f"DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy" for idx, (bz, lr, cr) in enumerate(params)],
         line_formats,
         legends,
-        f"{exp_save_path}/convergence_DRR.pdf",
+        f"{exp_save_path}/convergence_DRR_theta.pdf",
+        plot_every,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [f"DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy" for idx, (bz, lr, cr) in enumerate(params)],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_DRR_F.pdf",
         plot_every,
     )
 
@@ -364,25 +434,31 @@ print(f"C lr = {C_lr}")
 print(f"D lr = {D_lr}")
 print(f"C batch size = {C_batch_size}")
 print(f"D batch size = {D_batch_size}")
+print(f"C lr dec = {C_lr_dec}")
+print(f"D lr dec = {D_lr_dec}")
+print(f"C train load = {C_train_load}")
+print(f"D train load = {D_train_load}")
+print(f"save theta path = {save_theta_path}")
 print(f"{'-'*50}", flush=True)
 start = time.time()
 
-# print()
-# print("CSGD")
-# CSGD_check(
-#     logis_model,
-#     model_para_central,
-#     C_lr,
-#     C_lr_dec,
-#     C_batch_size,
-#     CEPOCH_base,
-#     exp_log_path,
-#     save_every,
-#     error_lr_0,
-#     line_formats,
-#     plot_every,
-#     C_train_load,
-# )
+print()
+print("CSGD")
+CSGD_check(
+    logis_model,
+    model_para_central,
+    C_lr,
+    C_lr_dec,
+    C_batch_size,
+    CEPOCH_base,
+    exp_log_path,
+    save_every,
+    error_lr_0,
+    line_formats,
+    plot_every,
+    C_train_load,
+    save_theta_path,
+)
 print()
 print("CRR")
 CRR_check(
@@ -398,44 +474,47 @@ CRR_check(
     line_formats,
     plot_every,
     C_train_load,
+    save_theta_path,
 )
 
-# print()
-# print("DSGD")
-# DSGD_check(
-#     logis_model,
-#     model_para_dis,
-#     D_lr,
-#     D_lr_dec,
-#     D_batch_size,
-#     DEPOCH_base,
-#     communication_matrix,
-#     communication_rounds,
-#     exp_log_path,
-#     save_every,
-#     error_lr_0,
-#     line_formats,
-#     plot_every,
-#     D_train_load
-# )
-# print()
-# print("DRR")
-# DRR_check(
-#     logis_model,
-#     model_para_dis,
-#     D_lr,
-#     D_lr_dec,
-#     D_batch_size,
-#     DEPOCH_base,
-#     communication_matrix,
-#     communication_rounds,
-#     exp_log_path,
-#     save_every,
-#     error_lr_0,
-#     line_formats,
-#     plot_every,
-#     D_train_load
-# )
+print()
+print("DSGD")
+DSGD_check(
+    logis_model,
+    model_para_dis,
+    D_lr,
+    D_lr_dec,
+    D_batch_size,
+    DEPOCH_base,
+    communication_matrix,
+    communication_rounds,
+    exp_log_path,
+    save_every,
+    error_lr_0,
+    line_formats,
+    plot_every,
+    D_train_load,
+    save_theta_path,
+)
+print()
+print("DRR")
+DRR_check(
+    logis_model,
+    model_para_dis,
+    D_lr,
+    D_lr_dec,
+    D_batch_size,
+    DEPOCH_base,
+    communication_matrix,
+    communication_rounds,
+    exp_log_path,
+    save_every,
+    error_lr_0,
+    line_formats,
+    plot_every,
+    D_train_load,
+    save_theta_path,
+)
 
 end = time.time()
 print(f"{'-'*50}")
