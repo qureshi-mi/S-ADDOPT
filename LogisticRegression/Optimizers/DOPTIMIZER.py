@@ -21,9 +21,12 @@ def D_SGD(
     batch_size,
     comm_round,
     lr_dec,
+    grad_track,
     save_path,
     exp_name,
     save_every,
+    error_lr_0,
+    stop_at_converge=False,
 ):
     """
     Distributed SGD Optimizer
@@ -47,6 +50,9 @@ def D_SGD(
     start = time.time()
     track_time = start
 
+    grad_track_y = np.zeros(theta_0.shape)
+    grad_prev = np.zeros(theta_0.shape)
+    
     for k in range(K):
         temp = theta[-1]
         if lr_dec:
@@ -58,13 +64,25 @@ def D_SGD(
             ]
             sample_vec = [val[:batch_size] for i, val in enumerate(sample_vec)]
             grad = prd.networkgrad(temp, permute=sample_vec, permute_flag=True)
+            
+            if grad_track:
+                grad_track_y = np.matmul(weight, grad_track_y + grad - grad_prev)
+                grad_prev = cp.deepcopy(grad)
+                temp = temp - learning_rate * grad_track_y
+            else:
+                temp = temp - learning_rate * grad
 
-            temp = temp - learning_rate * grad
             if (i+1) % comm_round == 0:
                 # averaging from neighbours
                 temp = np.matmul(
                     weight, temp
                 )  # this probably caused significant performance drop
+            
+            if stop_at_converge:
+                cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
+                if cost_path[-1] < 1e-1:
+                    print(f"Converged at {k} round")
+                    return theta, theta[-1], prd.F_val(theta[-1])
 
         ut.monitor("D_SGD", k, K, track_time)
         theta.append(cp.deepcopy(temp))
@@ -96,9 +114,12 @@ def D_RR(
     batch_size,
     comm_round,
     lr_dec,
+    grad_track,
     save_path,
     exp_name,
     save_every,
+    error_lr_0,
+    stop_at_converge=False,
 ):
     """
     Distributed DRR Optimizer
@@ -118,14 +139,13 @@ def D_RR(
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
 
-    # sample_vec = [np.random.permutation(prd.data_distr[i]) for i in range(prd.n)]    # each client needs a local batch index to perform updates
-    # slices = [0] * len(sample_vec)
-    # grad = prd.networkgrad( theta, permute = sample_vec )
-
     node_num = prd.n
     update_round = math.ceil(len(prd.X[0]) / batch_size)
     start = time.time()
     track_time = start
+
+    grad_track_y = np.zeros(theta_0.shape)
+    grad_prev = np.zeros(theta_0.shape)
 
     for k in range(K):
         temp = theta[-1]
@@ -141,10 +161,22 @@ def D_RR(
 
             grad = prd.networkgrad(temp, permute=permutes, permute_flag=True)
 
-            temp = temp - learning_rate * grad
+            if grad_track:
+                grad_track_y = np.matmul(weight, grad_track_y + grad - grad_prev)
+                grad_prev = cp.deepcopy(grad)
+                temp = temp - learning_rate * grad_track_y
+            else:
+                temp = temp - learning_rate * grad
+
             if (round+1) % comm_round == 0:
                 # averaging from neighbours
                 temp = np.matmul(weight, temp)
+
+            if stop_at_converge:
+                cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
+                if cost_path[-1] < 1e-1:
+                    print(f"Converged at {k} round")
+                    return theta, theta[-1], prd.F_val(theta[-1])
 
         ut.monitor("D_RR", k, K, track_time)
         theta.append(cp.deepcopy(temp))

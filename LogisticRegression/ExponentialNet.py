@@ -59,6 +59,8 @@ C_lr_dec = False # whether to decay the learning rate for central algorithms
 D_lr_dec = False # whether to decay the learning rate for decentralized algorithms
 C_train_load = False # whether to load the optimal model parameter for central algorithms
 D_train_load = False # whether to load the optimal model parameter for decentralized algorithms
+C_stop_at_converge = False # whether to stop the training when the model converges for central algorithms
+D_stop_at_converge = False # whether to stop the training when the model converges for decentralized algorithms
 save_theta_path = False # whether to save the model parameter training path for central and decentralized algorithms
 grad_track = True # whether to track the gradient norm for decentralized algorithms
 
@@ -134,6 +136,7 @@ def CSGD_check(
             train_log_path,
             f"CSGD_bz{bz}_lr{lr:.3f}_check",
             save_every,
+            error_lr_0,
         )
 
         np.save(f"{exp_save_path}/CSGD_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
@@ -207,6 +210,7 @@ def CRR_check(
             train_log_path,
             f"CRR_bz{bz}_lr{lr}_check",
             save_every,
+            error_lr_0,
         )
         np.save(f"{exp_save_path}/CRR_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
 
@@ -293,6 +297,7 @@ def DSGD_check(
             train_log_path,
             f"DSGD_bz{bz}_ur{cr}_lr{lr}",
             save_every,
+            error_lr_0,
         )
 
         exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
@@ -386,6 +391,7 @@ def DRR_check(
             train_log_path,
             f"DRR_bz{bz}_ur{cr}_lr{lr}",
             save_every,
+            error_lr_0,
         )
 
         exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
