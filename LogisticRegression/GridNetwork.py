@@ -13,6 +13,7 @@ from Problems.log_reg_cifar import LR_L4
 from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
 from utilities import initDir, save_npy, plot_figure_path, load_state
+import copy as cp
 
 """
 Data processing for MNIST
@@ -31,21 +32,22 @@ step_size = 1 / L / 2  ## selecting an appropriate step-size
 """
 Initializing variables
 """
-CEPOCH_base = 20000
-DEPOCH_base = 20000
+CEPOCH_base = 2000
+DEPOCH_base = 2000
 
 model_para_central = np.random.normal(0, 1, dim)
-model_para_dis = np.random.normal(0, 1, (node_num, dim))
+# model_para_dis = np.random.normal(0, 1, (node_num, dim))
+model_para_dis = [cp.deepcopy(model_para_central) for i in range(node_num)]
 undir_graph = Grid_graph(side_length).undirected()
 communication_matrix = Weight_matrix(undir_graph).column_stochastic()
-communication_rounds = [1]
+communication_rounds = [1, 5, 10, 20]
 
-C_lr = [0.1 / L * i / 10 for i in range(1, 14, 2)]
-D_lr = [0.1 / L * i / 10 for i in range(1, 14, 2)]
+C_lr = [1/8000]
+D_lr = [1/8000]
 C_lr_dec = False
 D_lr_dec = False
-C_batch_size = [50, 100, 200]
-D_batch_size = [50, 100, 200]
+C_batch_size = [1]
+D_batch_size = [1]
 
 line_formats = [
     "-vb",
@@ -61,9 +63,9 @@ line_formats = [
     "-|y",
     "-_r",
 ]
-exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/drr_robust_grid"
+exp_log_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/grid_ur_reg01"
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"
-plot_every = 2500
+plot_every = 100
 save_every = 5000
 
 """
@@ -113,16 +115,27 @@ def CSGD_check(
             f"CSGD_bz{bz}_lr{lr:.3f}_check",
             save_every,
         )
-        res_F_SGD = error_lr.cost_gap_path(theta_SGD)
         np.save(f"{exp_save_path}/CSGD_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
-        np.save(f"{exp_save_path}/CSGD_gap_bz{bz}_lr{lr:.6f}.npy", res_F_SGD)
+
+        res_F_SGD = error_lr.cost_gap_path(theta_SGD, gap_type="theta")
+        np.save(f"{exp_save_path}/CSGD_gap_bz{bz}_lr{lr:.6f}_theta.npy", res_F_SGD)
+        res_F_SGD_F = error_lr.cost_gap_path(theta_SGD, gap_type="F")
+        np.save(f"{exp_save_path}/CSGD_gap_bz{bz}_lr{lr:.6f}_F.npy", res_F_SGD_F)
 
     plot_figure_path(
         exp_save_path,
-        [f"CSGD_gap_bz{bz}_lr{lr:.6f}.npy" for idx, (bz, lr) in enumerate(params)],
+        [f"CSGD_gap_bz{bz}_lr{lr:.6f}_theta.npy" for idx, (bz, lr) in enumerate(params)],
         line_formats,
         [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)],
-        f"{exp_save_path}/convergence_SGD.pdf",
+        f"{exp_save_path}/convergence_SGD_theta.pdf",
+        plot_every,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [f"CSGD_gap_bz{bz}_lr{lr:.6f}_F.npy" for idx, (bz, lr) in enumerate(params)],
+        line_formats,
+        [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)],
+        f"{exp_save_path}/convergence_SGD_F.pdf",
         plot_every,
     )
 
@@ -165,16 +178,27 @@ def CRR_check(
             f"CRR_bz{bz}_lr{lr}_check",
             save_every,
         )
-        res_F_CRR = error_lr.cost_gap_path(theta_CRR)
         np.save(f"{exp_save_path}/CRR_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
-        np.save(f"{exp_save_path}/CRR_gap_bz{bz}_lr{lr:.6f}.npy", res_F_CRR)
+
+        res_F_CRR = error_lr.cost_gap_path(theta_CRR, gap_type="theta")
+        np.save(f"{exp_save_path}/CRR_gap_bz{bz}_lr{lr:.6f}_theta.npy", res_F_CRR)
+        res_F_CRR_F = error_lr.cost_gap_path(theta_CRR, gap_type="F")
+        np.save(f"{exp_save_path}/CRR_gap_bz{bz}_lr{lr:.6f}_F.npy", res_F_CRR_F)
 
     plot_figure_path(
         exp_save_path,
-        [f"CRR_gap_bz{bz}_lr{lr:.6f}.npy" for idx, (bz, lr) in enumerate(params)],
+        [f"CRR_gap_bz{bz}_lr{lr:.6f}_theta.npy" for idx, (bz, lr) in enumerate(params)],
         line_formats,
         [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)],
-        f"{exp_save_path}/convergence_CRR.pdf",
+        f"{exp_save_path}/convergence_CRR_theta.pdf",
+        plot_every,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [f"CRR_gap_bz{bz}_lr{lr:.6f}_F.npy" for idx, (bz, lr) in enumerate(params)],
+        line_formats,
+        [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)],
+        f"{exp_save_path}/convergence_CRR_F.pdf",
         plot_every,
     )
 
@@ -182,7 +206,6 @@ def CRR_check(
 """
 Decentralized Algorithms
 """
-
 
 def DSGD_check(
     logis_model,
@@ -230,26 +253,37 @@ def DSGD_check(
             save_every,
         )
 
-        res_F_D_SGD = error_lr.cost_gap_path(
-            np.sum(theta_D_SGD, axis=1) / logis_model.n
-        )
-
         exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
         legends.append(f"bz = {bz}, ur = {cr}, lr = {lr}")
         np.save(
             f"{exp_save_path}/DSGD_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy", theta_opt
         )
-        np.save(f"{exp_save_path}/DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy", res_F_D_SGD)
+
+        res_F_D_SGD = error_lr.cost_gap_path(theta_D_SGD, gap_type="theta")
+        np.save(f"{exp_save_path}/DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy", res_F_D_SGD)
+        res_F_D_SGD_F = error_lr.cost_gap_path(np.sum(theta_D_SGD, axis=1) / node_num, gap_type="F")
+        np.save(f"{exp_save_path}/DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy", res_F_D_SGD_F)
 
     plot_figure_path(
         exp_save_path,
         [
-            f"DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy"
+            f"DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"
             for idx, (bz, lr, cr) in enumerate(params)
         ],
         line_formats,
         legends,
-        f"{exp_save_path}/convergence_DSGD.pdf",
+        f"{exp_save_path}/convergence_DSGD_theta.pdf",
+        plot_every,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [
+            f"DSGD_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy"
+            for idx, (bz, lr, cr) in enumerate(params)
+        ],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_DSGD_F.pdf",
         plot_every,
     )
 
@@ -299,24 +333,38 @@ def DRR_check(
             f"DRR_bz{bz}_ur{cr}_lr{lr}",
             save_every,
         )
-        res_F_D_RR = error_lr.cost_gap_path(np.sum(theta_D_RR, axis=1) / logis_model.n)
 
         exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
         legends.append(f"bz = {bz}, ur = {cr}, lr = {lr}")
         np.save(
             f"{exp_save_path}/DRR_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy", theta_opt
         )
-        np.save(f"{exp_save_path}/DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy", res_F_D_RR)
+
+        res_F_D_RR = error_lr.cost_gap_path(theta_D_RR, gap_type="theta")
+        np.save(f"{exp_save_path}/DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy", res_F_D_RR)
+        res_F_D_RR_F = error_lr.cost_gap_path(np.sum(theta_D_RR, axis=1) / node_num, gap_type="F")
+        np.save(f"{exp_save_path}/DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy", res_F_D_RR_F)
 
     plot_figure_path(
         exp_save_path,
         [
-            f"DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}.npy"
+            f"DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"
             for idx, (bz, lr, cr) in enumerate(params)
         ],
         line_formats,
         legends,
-        f"{exp_save_path}/convergence_DRR.pdf",
+        f"{exp_save_path}/convergence_DRR_theta.pdf",
+        plot_every,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [
+            f"DRR_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy"
+            for idx, (bz, lr, cr) in enumerate(params)
+        ],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_DRR_F.pdf",
         plot_every,
     )
 
