@@ -44,7 +44,7 @@ def CGD(pr, learning_rate, K, theta_0):
     return theta, theta_opt, F_opt
 
 
-def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, save_every):
+def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False):
     """
     Centralized mini-batch SGD Optimizer. This optimizer trains on all
     data globally in a batched manner.
@@ -99,6 +99,12 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
                 f"{save_path}/{exp_name}{k}.pdf",
                 100,
             )
+        
+        if stop_at_converge:
+            cost_path = error_lr_0.cost_gap_path(theta, gap_type="theta")
+            if cost_path[-1] < 1e-1:
+                print(f"Converged at {k} round")
+                return theta, theta[-1], pr.F_val(theta[-1])
 
     print(f"{k} Round | {update_round}# Updates | {batch_size} Batch Size")
     print(f"Time Span: {time.time() - start}")
@@ -107,7 +113,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
     return theta, theta_opt, F_opt
 
 
-def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, save_every):
+def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False):
     """
     Centralized Random Reshuflling Optimizer.
 
@@ -153,6 +159,13 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
                 f"{save_path}/{exp_name}{k}.pdf",
                 100,
             )
+
+        if stop_at_converge:
+            cost_path = error_lr_0.cost_gap_path(theta, gap_type="theta")
+            if cost_path[-1] < 1e-1:
+                print(f"Converged at {k} round")
+                return theta, theta[-1], pr.F_val(theta[-1])
+            
     print(f"{k} Round | {cnt / batch_size}# Updates | {batch_size} Batch Size")
     print(f"Time Span: {time.time() - start}")
     theta_opt = theta[-1]
