@@ -83,7 +83,7 @@ D_train_load = (
 C_stop_at_converge = False  # whether to stop the training when the model converges for central algorithms
 D_stop_at_converge = False  # whether to stop the training when the model converges for decentralized algorithms
 save_theta_path = False  # whether to save the model parameter training path for central and decentralized algorithms
-grad_track = True  # whether to track the gradient norm for decentralized algorithms
+grad_track = False  # whether to track the gradient norm for decentralized algorithms
 load_init_theta = False  # whether to load the initial model parameter from pretrained model
 
 line_formats = [  # list of line formats for plotting
@@ -103,6 +103,7 @@ line_formats = [  # list of line formats for plotting
 exp_name = "test_distributed_algo"
 exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{exp_name}"  # path to save the experiment results
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
+init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
 plot_every = 50  # plot every 250 epochs
 save_every = 500  # save the model parameter every 5000 epochs
 
@@ -161,12 +162,15 @@ for algo in C_algos:
         C_lr_dec,
         C_batch_size,
         CEPOCH_base,
+        exp_name,
         exp_log_path,
         save_every,
         error_lr_0,
         line_formats,
         plot_every,
         C_train_load,
+        load_init_theta,
+        init_theta_path,
         save_theta_path,
         algo,
     )
@@ -181,12 +185,15 @@ for algo in D_algos:
         communication_matrix,
         communication_rounds,
         grad_track,
+        exp_name,
         exp_log_path,
         save_every,
         error_lr_0,
         line_formats,
         plot_every,
         D_train_load,
+        load_init_theta,
+        init_theta_path,
         save_theta_path,
         algo,
     )
