@@ -117,6 +117,9 @@ def load_state(save_path, exp_name, type="optimal"):
     elif type == "optimal":
         theta = np.load(f"{save_path}/{exp_name}_theta_optimal.npy")
         return None, theta  # return the last state (optimum)
+    elif type == "init":
+        theta = np.load(save_path)
+        return None, theta
 
 def load_optimal(save_path, exp_name):
     return np.load(f"{save_path}/{exp_name}")

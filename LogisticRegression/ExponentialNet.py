@@ -44,9 +44,10 @@ def centralized_algo(
     initDir(train_log_path)
 
     if load_init_theta:
-        model_para_cp = load_state(init_theta_path)
+        _, model_para_cp = load_state(init_theta_path, "", type="init")
     else:
         model_para_cp = cp.deepcopy(model_para)
+
     params = []
     for bz in C_batch_size:
         for lr in C_lr:
@@ -141,9 +142,11 @@ def decentralized_algo(
     initDir(train_log_path)
 
     if load_init_theta:
-        model_para_cp = load_state(init_theta_path)
+        _, model_para_cp = load_state(init_theta_path, "", type="init")
+        model_para_cp = np.array([model_para_cp for i in range(logis_model.n)])
     else:
         model_para_cp = cp.deepcopy(model_para)
+
     exp_names = []
     legends = []
     params = []
