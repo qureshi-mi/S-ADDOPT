@@ -4,11 +4,13 @@ Launch the training process of the logistic regression problem on given graph ne
 """
 
 import os
+import pytz
 import time
 import copy as cp
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from datetime import datetime
 from matplotlib.font_manager import FontProperties
 from graph import Weight_matrix, Geometric_graph, Exponential_graph, Grid_graph
 from analysis import error
@@ -55,36 +57,34 @@ communication_matrix = Weight_matrix(
     undir_graph
 ).column_stochastic()  # generate the communication matrix
 communication_rounds = [
-    1,
-    10,
-    20,
+    1
 ]  # list of number of communication rounds for decentralized algorithms experiments
 
 C_algos = []  # "SGD", "CRR"
 D_algos = ["DRR", "DSGD"]  # "DRR", "DSGD"
 
-CEPOCH_base = 1600  # number of epochs for central algorithms
-DEPOCH_base = 1600  # number of epochs for decentralized algorithms
+CEPOCH_base = [2000, 2000]  # number of epochs for central algorithms
+DEPOCH_base = [2000, 2000]  # number of epochs for decentralized algorithms
 
 C_lr = [1 / 8000]  # list of learning rate for central algorithms experiments
 D_lr = [1 / 8000]  # list of learning rate for decentralized algorithms experiments
 
-C_batch_size = [1]  # list of batch size for central algorithms experiments
-D_batch_size = [1]  # list of batch size for decentralized algorithms experiments
+C_batch_size = [5, 10]  # list of batch size for central algorithms experiments
+D_batch_size = [5, 10]  # list of batch size for decentralized algorithms experiments
 
 C_lr_dec = False  # whether to decay the learning rate for central algorithms
 D_lr_dec = False  # whether to decay the learning rate for decentralized algorithms
 C_train_load = (
-    False  # whether to load the optimal model parameter for central algorithms
+    False  # whether to load the previous model parameter for central algorithms
 )
 D_train_load = (
-    False  # whether to load the optimal model parameter for decentralized algorithms
+    False  # whether to load the previous model parameter for decentralized algorithms
 )
 C_stop_at_converge = False  # whether to stop the training when the model converges for central algorithms
 D_stop_at_converge = False  # whether to stop the training when the model converges for decentralized algorithms
 save_theta_path = False  # whether to save the model parameter training path for central and decentralized algorithms
 grad_track = False  # whether to track the gradient norm for decentralized algorithms
-load_init_theta = False  # whether to load the initial model parameter from pretrained model
+load_init_theta = True  # whether to load the initial model parameter from pretrained model
 
 line_formats = [  # list of line formats for plotting
     "-vb",
@@ -100,11 +100,11 @@ line_formats = [  # list of line formats for plotting
     "-|y",
     "-_r",
 ]
-exp_name = "test_distributed_algo"
+exp_name = "same_local_steps"
 exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{exp_name}"  # path to save the experiment results
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
 init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
-plot_every = 50  # plot every 250 epochs
+plot_every = 1  # plot every 250 epochs
 save_every = 500  # save the model parameter every 5000 epochs
 
 """
@@ -121,6 +121,11 @@ error_lr_0 = error(
 if os.path.exists(f"{exp_log_path}/DSGD"):
     print("experiments have been done")
     exit()
+
+newYorkTz = pytz.timezone("America/New_York")
+timeInNewYork = datetime.now(newYorkTz)
+currentTimeInNewYork = timeInNewYork.strftime("%H:%M:%S")
+print("The current time in New York is:", currentTimeInNewYork)
 
 print(f"{'-'*50}")
 print(f"{graph} Graph")
@@ -202,3 +207,8 @@ end = time.time()
 print(f"{'-'*50}")
 print(f"Total time: {end-start:.2f} seconds")
 print(f"{'-'*50}", flush=True)
+
+newYorkTz = pytz.timezone("America/New_York")
+timeInNewYork = datetime.now(newYorkTz)
+currentTimeInNewYork = timeInNewYork.strftime("%H:%M:%S")
+print("The current time in New York is:", currentTimeInNewYork)
