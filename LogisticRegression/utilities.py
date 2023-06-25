@@ -39,7 +39,7 @@ def save_npy(npys, root_path, exp_name):
         np.save(f"{root_path}/{exp_name[i]}.npy", array)
 
 
-def plot_figure_path(exp_save_path, exp_names, formats, legend, save_path, plot_every):
+def plot_figure_path(exp_save_path, exp_names, formats, legend, save_path, plot_every, plot_first):
     print("plotting the figure...", flush=True)
     plt.clf()
     mark_every = 1
@@ -52,14 +52,14 @@ def plot_figure_path(exp_save_path, exp_names, formats, legend, save_path, plot_
     for i, name in enumerate(exp_names):
         line = np.load(f"{exp_save_path}/{name}")
         xaxis = np.linspace(0, len(line)-1, num=len(line), dtype=int)
-        yaxis = [abs(point) for point in  line[::plot_every]]   # the F_val could be negative
+        yaxis = [abs(point) for point in  line[:plot_first:plot_every]]   # the F_val could be negative
         if i >= len(formats):
             plt.plot(
-                xaxis[::plot_every], yaxis, markevery=mark_every
+                xaxis[:plot_first:plot_every], yaxis, markevery=mark_every
             )
         else:
             plt.plot(
-                xaxis[::plot_every], yaxis, formats[i], markevery=mark_every
+                xaxis[:plot_first:plot_every], yaxis, formats[i], markevery=mark_every
             )
 
     plt.legend(legend, prop=font2)

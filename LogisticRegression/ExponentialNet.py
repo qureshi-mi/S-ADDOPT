@@ -32,6 +32,7 @@ def centralized_algo(
     error_lr,
     line_formats,
     plot_every,
+    plot_first,
     train_load,
     load_init_theta,
     init_theta_path,
@@ -53,9 +54,15 @@ def centralized_algo(
         for lr in C_lr:
             params.append((CEPOCH_base[idx], bz, lr))
 
+    exp_names = []
+    legends = []
     for idx, (epoch, bz, lr) in enumerate(params):
+        exp_names.append(f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy")
+        legends.append(f"{algo}: bz = {bz}, lr = {lr}")
         model_para = model_para_cp
+
         if os.path.exists(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"):
+            print(f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy")
             continue
         if train_load:
             model_para = load_optimal(exp_save_path, f"{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy")
@@ -97,13 +104,16 @@ def centralized_algo(
         if save_theta_path:
             np.save(f"{exp_save_path}/{algo}_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy", theta)
 
+        
+        
     plot_figure_path(
         exp_save_path,
-        [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy" for idx, (epoch, bz, lr) in enumerate(params)],
+        exp_names,
         line_formats,
         [f"bz = {bz}, lr = {lr}" for idx, (epoch, bz, lr) in enumerate(params)] + ["CGD"],
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
         plot_every,
+        plot_first,
     )
     plot_figure_path(
         exp_save_path,
@@ -112,7 +122,11 @@ def centralized_algo(
         [f"bz = {bz}, lr = {lr}" for idx, (epoch, bz, lr) in enumerate(params)] + ["CGD"],
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
         plot_every,
+        plot_first,
     )
+    
+    exp_names = [f"central_{algo}/{name}"  for name in exp_names]
+    return exp_names, legends
 
 def decentralized_algo(
     logis_model,
@@ -130,6 +144,7 @@ def decentralized_algo(
     error_lr,
     line_formats,
     plot_every,
+    plot_first,
     train_load,
     load_init_theta,
     init_theta_path,
@@ -147,17 +162,21 @@ def decentralized_algo(
     else:
         model_para_cp = cp.deepcopy(model_para)
 
-    exp_names = []
-    legends = []
     params = []
     for idx, bz in enumerate(D_batch_size):
         for lr in D_lr:
             for cr in communication_rounds:
                 params.append((DEPOCH_base[idx], bz, lr, cr))
 
+    exp_names = []
+    legends = []
     for idx, (epoch, bz, lr, cr) in enumerate(params):
+        exp_names.append(f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy")
+        legends.append(f"{algo}: bz = {bz}, ur = {cr}, lr = {lr}")
         model_para = model_para_cp
-        if os.path.exists(f"{exp_save_path}/{algo}_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"):
+
+        if os.path.exists(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"):
+            print(f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy")
             continue
         if train_load:
             model_para = load_optimal(exp_save_path, f"{algo}_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy")
@@ -194,9 +213,6 @@ def decentralized_algo(
                 save_every,
                 error_lr,
             )
-            
-        exp_names.append(f"bz{bz}_ur{cr}_lr{lr}")
-        legends.append(f"bz = {bz}, ur = {cr}, lr = {lr}")
 
         res_F_D = error_lr.cost_gap_path(theta_D, gap_type="theta")
         np.save(
@@ -214,11 +230,12 @@ def decentralized_algo(
 
     plot_figure_path(
         exp_save_path,
-        [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy" for idx, (epoch, bz, lr, cr) in enumerate(params)],
+        exp_names,
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
         plot_every,
+        plot_first,
     )
     plot_figure_path(
         exp_save_path,
@@ -227,4 +244,8 @@ def decentralized_algo(
         legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
         plot_every,
+        plot_first,
     )
+
+    exp_names = [f"{algo}/{name}"  for name in exp_names]
+    return exp_names, legends
