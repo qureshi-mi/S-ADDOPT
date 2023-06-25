@@ -49,22 +49,22 @@ def centralized_algo(
         model_para_cp = cp.deepcopy(model_para)
 
     params = []
-    for bz in C_batch_size:
+    for idx, bz in enumerate(C_batch_size):
         for lr in C_lr:
-            params.append((bz, lr))
+            params.append((CEPOCH_base[idx], bz, lr))
 
-    for idx, (bz, lr) in enumerate(params):
+    for idx, (epoch, bz, lr) in enumerate(params):
         model_para = model_para_cp
-        if os.path.exists(f"{exp_save_path}/{algo}_gap_bz{bz}_lr{lr:.6f}_theta.npy"):
+        if os.path.exists(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"):
             continue
         if train_load:
-            model_para = load_optimal(exp_save_path, f"{algo}_opt_theta_bz{bz}_lr{lr:.6f}.npy")
+            model_para = load_optimal(exp_save_path, f"{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy")
 
         if algo == "SGD":
             theta, theta_opt, F_opt = copt.SGD(
                 logis_model,
                 lr,
-                CEPOCH_base,
+                epoch,
                 model_para,
                 bz,
                 C_lr_dec,
@@ -77,7 +77,7 @@ def centralized_algo(
             theta, theta_opt, F_opt = copt.C_RR(
                 logis_model,
                 lr,
-                CEPOCH_base,
+                epoch,
                 model_para,
                 bz,
                 C_lr_dec,
@@ -87,29 +87,29 @@ def centralized_algo(
                 error_lr,
             )
 
-        np.save(f"{exp_save_path}/{algo}_opt_theta_bz{bz}_lr{lr:.6f}.npy", theta_opt)
+        np.save(f"{exp_save_path}/{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy", theta_opt)
 
         res_F = error_lr.cost_gap_path(theta, gap_type="theta")
-        np.save(f"{exp_save_path}/{algo}_gap_bz{bz}_lr{lr:.6f}_theta.npy", res_F)
+        np.save(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy", res_F)
         res_F_F = error_lr.cost_gap_path(theta, gap_type="F")
-        np.save(f"{exp_save_path}/{algo}_gap_bz{bz}_lr{lr:.6f}_F.npy", res_F_F)
+        np.save(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy", res_F_F)
 
         if save_theta_path:
-            np.save(f"{exp_save_path}/{algo}_theta_bz{bz}_lr{lr:.6f}.npy", theta)
+            np.save(f"{exp_save_path}/{algo}_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy", theta)
 
     plot_figure_path(
         exp_save_path,
-        [f"{algo}_gap_bz{bz}_lr{lr:.6f}_theta.npy" for idx, (bz, lr) in enumerate(params)],
+        [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy" for idx, (epoch, bz, lr) in enumerate(params)],
         line_formats,
-        [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)] + ["CGD"],
+        [f"bz = {bz}, lr = {lr}" for idx, (epoch, bz, lr) in enumerate(params)] + ["CGD"],
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
         plot_every,
     )
     plot_figure_path(
         exp_save_path,
-        [f"{algo}_gap_bz{bz}_lr{lr:.6f}_F.npy" for idx, (bz, lr) in enumerate(params)],
+        [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy" for idx, (epoch, bz, lr) in enumerate(params)],
         line_formats,
-        [f"bz = {bz}, lr = {lr}" for idx, (bz, lr) in enumerate(params)] + ["CGD"],
+        [f"bz = {bz}, lr = {lr}" for idx, (epoch, bz, lr) in enumerate(params)] + ["CGD"],
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
         plot_every,
     )
@@ -150,12 +150,12 @@ def decentralized_algo(
     exp_names = []
     legends = []
     params = []
-    for bz in D_batch_size:
+    for idx, bz in enumerate(D_batch_size):
         for lr in D_lr:
             for cr in communication_rounds:
-                params.append((bz, lr, cr))
+                params.append((DEPOCH_base[idx], bz, lr, cr))
 
-    for idx, (bz, lr, cr) in enumerate(params):
+    for idx, (epoch, bz, lr, cr) in enumerate(params):
         model_para = model_para_cp
         if os.path.exists(f"{exp_save_path}/{algo}_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"):
             continue
@@ -167,7 +167,7 @@ def decentralized_algo(
                 logis_model,
                 communication_matrix,
                 lr,
-                int(DEPOCH_base),
+                int(epoch),
                 model_para,
                 bz,
                 cr,
@@ -183,7 +183,7 @@ def decentralized_algo(
                 logis_model,
                 communication_matrix,
                 lr,
-                int(DEPOCH_base),
+                int(epoch),
                 model_para,
                 bz,
                 cr,
@@ -200,21 +200,21 @@ def decentralized_algo(
 
         res_F_D = error_lr.cost_gap_path(theta_D, gap_type="theta")
         np.save(
-            f"{exp_save_path}/{algo}_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy",
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy",
             res_F_D,
         )
         res_F_D_F = error_lr.cost_gap_path(np.sum(theta_D, axis=1) / logis_model.n, gap_type="F")
         np.save(
-            f"{exp_save_path}/{algo}_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy",
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy",
             res_F_D_F,
         )
 
         if save_theta_path:
-            np.save(f"{exp_save_path}/{algo}_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy", theta_D)
+            np.save(f"{exp_save_path}/{algo}_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}.npy", theta_D)
 
     plot_figure_path(
         exp_save_path,
-        [f"{algo}_gap_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy" for idx, (bz, lr, cr) in enumerate(params)],
+        [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy" for idx, (epoch, bz, lr, cr) in enumerate(params)],
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
@@ -222,7 +222,7 @@ def decentralized_algo(
     )
     plot_figure_path(
         exp_save_path,
-        [f"{algo}_gap_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy" for idx, (bz, lr, cr) in enumerate(params)],
+        [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy" for idx, (epoch, bz, lr, cr) in enumerate(params)],
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
