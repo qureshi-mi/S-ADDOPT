@@ -46,6 +46,7 @@ def D_SGD(
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
 
+    node_num = prd.n
     update_round = math.ceil(len(prd.X[0]) / batch_size)
     start = time.time()
     track_time = start
@@ -58,31 +59,35 @@ def D_SGD(
         if lr_dec:
             learning_rate = 1 / ((k + 1)/100 + 2)
 
-        for i in range(update_round):
-            sample_vec = [
-                np.random.permutation(prd.data_distr[i]) for i in range(prd.n)
-            ]
-            sample_vec = [val[:batch_size] for i, val in enumerate(sample_vec)]
-            grad = prd.networkgrad(temp, permute=sample_vec, permute_flag=True)
-            
-            if grad_track:
-                grad_track_y = np.matmul(weight, grad_track_y + grad - grad_prev)
-                grad_prev = cp.deepcopy(grad)
-                temp = temp - learning_rate * grad_track_y
-            else:
-                temp = temp - learning_rate * grad
+        for node in range(node_num):
+            for i in range(update_round):
+                sample_vec = [
+                    np.random.permutation(prd.data_distr[i]) for i in range(prd.n)
+                ]
+                sample_vec = [val[:batch_size] for i, val in enumerate(sample_vec)]
+                grad = prd.networkgrad(temp, permute=sample_vec, permute_flag=True)
+                
+                if grad_track:
+                    grad_track_y = np.matmul(weight, grad_track_y + grad - grad_prev)
+                    grad_prev = cp.deepcopy(grad)
+                    temp = temp - learning_rate * grad_track_y
+                else:
+                    temp = temp - learning_rate * grad
 
-            if (i+1) % comm_round == 0:
-                # averaging from neighbours
-                temp = np.matmul(
-                    weight, temp
-                )  # this probably caused significant performance drop
-            
-            if stop_at_converge:
-                cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
-                if cost_path[-1] < 1e-1:
-                    print(f"Converged at {k} round")
-                    return theta, theta[-1], prd.F_val(theta[-1])
+                if (i+1) % comm_round == 0:
+                    # averaging from neighbours
+                    temp = np.matmul(
+                        weight, temp
+                    )  # this probably caused significant performance drop
+
+                    # theta_avg = np.sum(temp, axis=0) / node_num
+                    # temp = np.array([theta_avg for i in range(node_num)])
+                
+                if stop_at_converge:
+                    cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
+                    if cost_path[-1] < 1e-1:
+                        print(f"Converged at {k} round")
+                        return theta, theta[-1], prd.F_val(theta[-1])
 
         ut.monitor("D_SGD", k, K, track_time)
         theta.append(cp.deepcopy(temp))
@@ -152,31 +157,35 @@ def D_RR(
         if lr_dec:
             learning_rate = 1 / ((k + 1)/100 + 2)
 
-        sample_vec = [np.random.permutation(prd.data_distr[i]) for i in range(prd.n)]
-        for round in range(update_round):
-            permutes = [
-                val[round * batch_size : (round + 1) * batch_size]
-                for i, val in enumerate(sample_vec)
-            ]
+        for node in range(node_num):
+            sample_vec = [np.random.permutation(prd.data_distr[i]) for i in range(prd.n)]
+            for round in range(update_round):
+                permutes = [
+                    val[round * batch_size : (round + 1) * batch_size]
+                    for i, val in enumerate(sample_vec)
+                ]
 
-            grad = prd.networkgrad(temp, permute=permutes, permute_flag=True)
+                grad = prd.networkgrad(temp, permute=permutes, permute_flag=True)
 
-            if grad_track:
-                grad_track_y = np.matmul(weight, grad_track_y + grad - grad_prev)
-                grad_prev = cp.deepcopy(grad)
-                temp = temp - learning_rate * grad_track_y
-            else:
-                temp = temp - learning_rate * grad
+                if grad_track:
+                    grad_track_y = np.matmul(weight, grad_track_y + grad - grad_prev)
+                    grad_prev = cp.deepcopy(grad)
+                    temp = temp - learning_rate * grad_track_y
+                else:
+                    temp = temp - learning_rate * grad
 
-            if (round+1) % comm_round == 0:
-                # averaging from neighbours
-                temp = np.matmul(weight, temp)
+                if (round+1) % comm_round == 0:
+                    # averaging from neighbours
+                    temp = np.matmul(weight, temp)
+                    
+                    # theta_avg = np.sum(temp, axis=0) / node_num
+                    # temp = np.array([theta_avg for i in range(node_num)])
 
-            if stop_at_converge:
-                cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
-                if cost_path[-1] < 1e-1:
-                    print(f"Converged at {k} round")
-                    return theta, theta[-1], prd.F_val(theta[-1])
+                if stop_at_converge:
+                    cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
+                    if cost_path[-1] < 1e-1:
+                        print(f"Converged at {k} round")
+                        return theta, theta[-1], prd.F_val(theta[-1])
 
         ut.monitor("D_RR", k, K, track_time)
         theta.append(cp.deepcopy(temp))
