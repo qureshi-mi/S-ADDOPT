@@ -168,3 +168,30 @@ def initDir(dir_path):
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
 
+def convert_to_doubly_stochastic(matrix, max_iterations=100, tolerance=1e-6):
+    """
+    The Sinkhorn-Knopp algorithm.
+    
+    Converts the given matrix to a doubly stochastic matrix.
+    The conversion is done in-place.
+    """
+    n = matrix.shape[0]  # Assuming matrix is a square matrix
+
+    # Normalize rows and columns iteratively
+    for _ in range(max_iterations):
+        prev_matrix = matrix.copy()
+
+        # Normalize rows
+        row_sums = np.sum(matrix, axis=1)
+        matrix /= row_sums[:, np.newaxis]
+
+        # Normalize columns
+        col_sums = np.sum(matrix, axis=0)
+        matrix /= col_sums
+
+        # Check convergence
+        max_diff = np.max(np.abs(matrix - prev_matrix))
+        if max_diff < tolerance:
+            break
+
+    return matrix
