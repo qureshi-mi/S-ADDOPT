@@ -27,6 +27,7 @@ def D_SGD(
     save_every,
     error_lr_0,
     stop_at_converge=False,
+    comm_type="graph_avg",
 ):
     """
     Distributed SGD Optimizer
@@ -53,11 +54,11 @@ def D_SGD(
 
     grad_track_y = np.zeros(theta_0.shape)
     grad_prev = np.zeros(theta_0.shape)
-    
+
     for k in range(K):
         temp = theta[-1]
         if lr_dec:
-            learning_rate = 1 / ((k + 1)/100 + 2)
+            learning_rate = 1 / ((k + 1) / 100 + 2)
 
         for node in range(node_num):
             for i in range(update_round):
@@ -66,7 +67,7 @@ def D_SGD(
                 ]
                 sample_vec = [val[:batch_size] for i, val in enumerate(sample_vec)]
                 grad = prd.networkgrad(temp, permute=sample_vec, permute_flag=True)
-                
+
                 if grad_track:
                     grad_track_y = np.matmul(weight, grad_track_y + grad - grad_prev)
                     grad_prev = cp.deepcopy(grad)
@@ -74,15 +75,17 @@ def D_SGD(
                 else:
                     temp = temp - learning_rate * grad
 
-                if (i+1) % comm_round == 0:
+                if (i + 1) % comm_round == 0:
                     # averaging from neighbours
-                    temp = np.matmul(
-                        weight, temp
-                    )  # this probably caused significant performance drop
+                    # this probably caused significant performance drop
+                    if comm_type == "graph_avg":
+                        temp = np.matmul(weight, temp)
+                    elif comm_type == "all_avg":
+                        theta_avg = np.sum(temp, axis=0) / node_num
+                        temp = np.array([theta_avg for i in range(node_num)])
+                    elif comm_type == "no_comm":
+                        pass
 
-                    # theta_avg = np.sum(temp, axis=0) / node_num
-                    # temp = np.array([theta_avg for i in range(node_num)])
-                
                 if stop_at_converge:
                     cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
                     if cost_path[-1] < 1e-1:
@@ -125,6 +128,7 @@ def D_RR(
     save_every,
     error_lr_0,
     stop_at_converge=False,
+    comm_type="graph_avg",
 ):
     """
     Distributed DRR Optimizer
@@ -155,10 +159,12 @@ def D_RR(
     for k in range(K):
         temp = theta[-1]
         if lr_dec:
-            learning_rate = 1 / ((k + 1)/100 + 2)
+            learning_rate = 1 / ((k + 1) / 100 + 2)
 
         for node in range(node_num):
-            sample_vec = [np.random.permutation(prd.data_distr[i]) for i in range(prd.n)]
+            sample_vec = [
+                np.random.permutation(prd.data_distr[i]) for i in range(prd.n)
+            ]
             for round in range(update_round):
                 permutes = [
                     val[round * batch_size : (round + 1) * batch_size]
@@ -174,12 +180,15 @@ def D_RR(
                 else:
                     temp = temp - learning_rate * grad
 
-                if (round+1) % comm_round == 0:
+                if (round + 1) % comm_round == 0:
                     # averaging from neighbours
-                    temp = np.matmul(weight, temp)
-                    
-                    # theta_avg = np.sum(temp, axis=0) / node_num
-                    # temp = np.array([theta_avg for i in range(node_num)])
+                    if comm_type == "graph_avg":
+                        temp = np.matmul(weight, temp)
+                    elif comm_type == "all_avg":
+                        theta_avg = np.sum(temp, axis=0) / node_num
+                        temp = np.array([theta_avg for i in range(node_num)])
+                    elif comm_type == "no_comm":
+                        pass
 
                 if stop_at_converge:
                     cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
