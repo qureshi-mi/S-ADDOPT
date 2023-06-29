@@ -37,6 +37,7 @@ def centralized_algo(
     load_init_theta,
     init_theta_path,
     save_theta_path,
+    stop_at_convergence,
     algo,
 ):
     exp_save_path = f"{exp_log_path}/central_{algo}"
@@ -79,6 +80,7 @@ def centralized_algo(
                 f"{algo}_bz{bz}_lr{lr:.3f}_check",
                 save_every,
                 error_lr,
+                stop_at_converge=stop_at_convergence,
             )
         elif algo == "CRR":
             theta, theta_opt, F_opt = copt.C_RR(
@@ -92,6 +94,7 @@ def centralized_algo(
                 f"{algo}_bz{bz}_lr{lr}_check",
                 save_every,
                 error_lr,
+                stop_at_converge=stop_at_convergence,
             )
 
         np.save(f"{exp_save_path}/{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy", theta_opt)
@@ -110,7 +113,7 @@ def centralized_algo(
         exp_save_path,
         exp_names,
         line_formats,
-        [f"bz = {bz}, lr = {lr}" for idx, (epoch, bz, lr) in enumerate(params)] + ["CGD"],
+        legends,
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
         plot_every,
         plot_first,
@@ -119,7 +122,7 @@ def centralized_algo(
         exp_save_path,
         [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy" for idx, (epoch, bz, lr) in enumerate(params)],
         line_formats,
-        [f"bz = {bz}, lr = {lr}" for idx, (epoch, bz, lr) in enumerate(params)] + ["CGD"],
+        legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
         plot_every,
         plot_first,
@@ -137,6 +140,7 @@ def decentralized_algo(
     DEPOCH_base,
     communication_matrix,
     communication_rounds,
+    comm_type,
     grad_track,
     exp_name,
     exp_log_path,
@@ -149,6 +153,7 @@ def decentralized_algo(
     load_init_theta,
     init_theta_path,
     save_theta_path,
+    stop_at_convergence,
     algo,
 ):
     exp_save_path = f"{exp_log_path}/{algo}"
@@ -196,6 +201,8 @@ def decentralized_algo(
                 f"{algo}_bz{bz}_ur{cr}_lr{lr}",
                 save_every,
                 error_lr,
+                stop_at_converge=stop_at_convergence,
+                comm_type=comm_type,
             )
         elif algo == "DRR":
             theta_D = dopt.D_RR(
@@ -212,6 +219,8 @@ def decentralized_algo(
                 f"{algo}_bz{bz}_ur{cr}_lr{lr}",
                 save_every,
                 error_lr,
+                stop_at_converge=stop_at_convergence,
+                comm_type=comm_type,
             )
 
         res_F_D = error_lr.cost_gap_path(theta_D, gap_type="theta")

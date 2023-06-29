@@ -6,6 +6,7 @@ Launch the training process of the logistic regression problem on given graph ne
 import os
 import pytz
 import time
+import math
 import copy as cp
 import numpy as np
 import networkx as nx
@@ -19,7 +20,7 @@ from Problems.log_reg_cifar import LR_L4
 from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
 from utilities import (
-    load_state, plot_figure_path
+    load_state, plot_figure_path, convert_to_doubly_stochastic
 )
 from ExponentialNet import centralized_algo, decentralized_algo
 
@@ -28,7 +29,7 @@ np.random.seed(0)
 """
 Data processing for MNIST
 """
-node_num = 16  ## number of nodes
+node_num = 4  ## number of nodes
 logis_model = LR_L2(
     node_num, limited_labels=False, balanced=True
 )  ## instantiate the problem class
@@ -45,22 +46,29 @@ model_para_central = np.random.normal(
 )  # initialize the model parameter for central algorithms
 model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
 
-graph = "exponential"
+graph = "grid"  # "exponential", "grid", "geometric
 if graph == "exponential":
     undir_graph = Exponential_graph(
         node_num
     ).undirected()  # generate the undirected graph
 elif graph == "grid":
-    undir_graph = Grid_graph(np.sqrt(node_num, dtype=np.int32)).undirected()
+    undir_graph = Grid_graph(int(math.sqrt(node_num))).undirected()
+elif graph == "geometric":
+    undir_graph = Geometric_graph(
+        node_num
+    ).undirected(0.8)
 
-communication_matrix = Weight_matrix(
-    undir_graph
-).column_stochastic()  # generate the communication matrix
+# communication_matrix = Weight_matrix(
+#     undir_graph
+# ).column_stochastic()  # generate the communication matrix
+communication_matrix = Weight_matrix(undir_graph).row_stochastic()
+# communication_matrix = convert_to_doubly_stochastic(communication_matrix)
 communication_rounds = [
-    1, 10, 20, 100
+    1, 20
 ]  # list of number of communication rounds for decentralized algorithms experiments
+comm_type = "graph_avg" # "graph_avg", "all_avg", "no_comm"
 
-C_algos = ["SGD", "CRR"]  # "SGD", "CRR"
+C_algos = []  # "SGD", "CRR"
 D_algos = ["DSGD", "DRR"]  # "DSGD", "DRR"
 
 CEPOCH_base = [1000]  # number of epochs for central algorithms
@@ -102,7 +110,7 @@ line_formats = [  # list of line formats for plotting
     "-|y",
     "-_r",
 ]
-exp_name = "diff_cr"
+exp_name = "grid_doubly"
 exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{exp_name}"  # path to save the experiment results
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
 init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
@@ -140,6 +148,7 @@ print(f"avg local sample {avg_local_sample}")
 print(f"CEPOCH base = {CEPOCH_base}")
 print(f"DEPOCH base {DEPOCH_base}")
 print(f"communication rounds = {communication_rounds}")
+print(f"communication type = {comm_type}")
 print(f"C lr = {C_lr}")
 print(f"D lr = {D_lr}")
 print(f"C batch size = {C_batch_size}")
@@ -152,6 +161,7 @@ print(f"C stop at converge = {C_stop_at_converge}")
 print(f"D stop at converge = {D_stop_at_converge}")
 print(f"save theta path = {save_theta_path}")
 print(f"grad track = {grad_track}")
+print(f"load init theta = {load_init_theta}")
 
 print(f"exp name = {exp_name}")
 print(f"exp log path = {exp_log_path}")
@@ -184,6 +194,7 @@ for algo in C_algos:
         load_init_theta,
         init_theta_path,
         save_theta_path,
+        C_stop_at_converge,
         algo,
     )
     exp_name_all.extend(exp_names)
@@ -199,6 +210,7 @@ for algo in D_algos:
         DEPOCH_base,
         communication_matrix,
         communication_rounds,
+        comm_type,
         grad_track,
         exp_name,
         exp_log_path,
@@ -211,6 +223,7 @@ for algo in D_algos:
         load_init_theta,
         init_theta_path,
         save_theta_path,
+        D_stop_at_converge,
         algo,
     )
     exp_name_all.extend(exp_names)
