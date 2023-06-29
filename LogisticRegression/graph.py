@@ -87,6 +87,10 @@ class Exponential_graph:
     
     def undirected(self):
         U = np.zeros( (self.size,self.size) )
+        if self.size == 1:
+            U[0][0] = 1
+            return U
+        
         for i in range( self.size ):
             U[i][i] = 1
             hops = np.array( range( int(math.log(self.size-1,2)) + 1 ) )  
