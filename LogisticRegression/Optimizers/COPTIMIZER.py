@@ -77,7 +77,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
     track_time = start
     for k in range(K):  # k local training rounds
         if lr_dec:
-            learning_rate = 1 / ((k + 1)/100 + 2)
+            learning_rate = 1 / (50*k + 400)
 
         temp = theta[-1]
         # gradient updates happening in one local training round
@@ -136,7 +136,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
     track_time = start
     for k in range(K):
         if lr_dec:
-            learning_rate = 1 / ((k + 1)/10 + 2)
+            learning_rate = 1 / (50*k + 400)
 
         cnt = 0
         permutation = np.random.permutation(pr.N)

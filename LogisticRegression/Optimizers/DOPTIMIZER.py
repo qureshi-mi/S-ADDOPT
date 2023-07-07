@@ -58,7 +58,7 @@ def D_SGD(
     for k in range(K):
         temp = theta[-1]
         if lr_dec:
-            learning_rate = 1 / ((k + 1) / 100 + 2)
+            learning_rate = 1 / (50*k + 400)
 
         for node in range(node_num):
             for i in range(update_round):
@@ -159,7 +159,7 @@ def D_RR(
     for k in range(K):
         temp = theta[-1]
         if lr_dec:
-            learning_rate = 1 / ((k + 1) / 100 + 2)
+            learning_rate = 1 / (50*k + 400)
 
         for node in range(node_num):
             sample_vec = [
