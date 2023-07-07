@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 from analysis import error
 import os
+from graph import *
 
 
 def monitor(name, current, total, start_time):
@@ -174,6 +175,11 @@ def convert_to_doubly_stochastic(matrix, max_iterations=100, tolerance=1e-6):
     
     Converts the given matrix to a doubly stochastic matrix.
     The conversion is done in-place.
+
+    @param matrix: The matrix to be converted.
+    @param max_iterations: The maximum number of iterations to perform.
+    @param tolerance: The tolerance to check convergence.
+    @return: The given matrix, converted to doubly stochastic.
     """
     n = matrix.shape[0]  # Assuming matrix is a square matrix
 
@@ -195,3 +201,139 @@ def convert_to_doubly_stochastic(matrix, max_iterations=100, tolerance=1e-6):
             break
 
     return matrix
+
+def spectral_norm(comm_matrix):
+    # ones matrix
+    ones = np.ones(comm_matrix.shape)
+    matrix = comm_matrix - ones / comm_matrix.shape[0]
+
+    # Compute the matrix A^T * A
+    ata = np.matmul(matrix.T, matrix)
+
+    # Calculate the eigenvalues of A^T * A
+    eigenvalues, _ = np.linalg.eig(ata)
+
+    # Find the maximum eigenvalue
+    max_eigenvalue = np.max(eigenvalues)
+
+    # Calculate the spectral norm as the square root of the maximum eigenvalue
+    spectral_norm = np.sqrt(max_eigenvalue)
+
+    return spectral_norm
+
+def print_matrix(matrix):
+    print("Matrix:")
+    for row in matrix:
+        for element in row:
+            if element < 0:
+                print(f"{element:.3f}", end=" ")
+            else:
+                print(f" {element:.3f}", end=" ")
+        print()
+    print()
+
+def convergence_analysis():
+    lr_constant = False
+    epoch = 1000
+
+    m = {
+        "centralized": 12000,
+        "distributed": 75,
+    }
+    n = {
+        "centralized": 1,
+        "distributed": 16,
+    }
+
+    net_lambda = {
+        "grid": 0.8629819803720482,
+        "exp": 0.5000000000000003,
+        "geo": 0.43760846131515274,
+    }
+
+    algos = ["SGD", "CRR", "DSGD", "DRR", "DSGT", "GT-RR"]
+
+    if lr_constant:
+        # Constant learning rate
+        lr = 1/8000
+
+        for algo in algos:
+            if algo == "SGD":
+                error_floor = lr / n["centralized"]
+                print(f"{algo:<5}: Error floor: {error_floor}")
+
+            elif algo == "CRR":
+                error_floor = lr**2 * m["centralized"]
+                print(f"{algo:<5}: Error floor: {error_floor}")
+
+            elif algo == "DSGD":
+                for net, lambd in net_lambda.items():
+                    error_floor = lr / n["distributed"] + lr**2 / (1-lambd)**2
+                    print(f"{algo:<5}: Error floor: {error_floor} ({net})")
+
+            elif algo == "DRR":
+                for net, lambd in net_lambda.items():
+                    error_floor = lr**2 * m["distributed"] / (1-lambd)**3
+                    print(f"{algo:<5}: Error floor: {error_floor} ({net})")
+
+            elif algo == "DSGT":
+                for net, lambd in net_lambda.items():
+                    error_floor = lr / n["distributed"] + lr**2 / (1-lambd) + lr**4 / (n["distributed"] * (1-lambd)**4)
+                    print(f"{algo:<5}: Error floor: {error_floor} ({net})")
+
+            elif algo == "GT-RR":
+                for net, lambd in net_lambda.items():
+                    error_floor = lr**2 * m["distributed"] / (1-lambd) + lr**4 * m["distributed"]**4 / (1-lambd)**2
+                    print(f"{algo:<5}: Error floor: {error_floor} ({net})")
+
+    else:
+        # Decreasing learning rate
+        lr = lambda t: 1 / (50*t + 400)
+
+        for algo in algos:
+            if algo == "SGD":
+                error_floor = 1 / (m["centralized"] * n["centralized"] * epoch)
+                print(f"{algo:<5}: Error floor: {error_floor}")
+
+            elif algo == "CRR":
+                error_floor = np.log(epoch) / (m["centralized"] * epoch**2)
+                print(f"{algo:<5}: Error floor: {error_floor}")
+
+            elif algo == "DSGD":
+                for net, lambd in net_lambda.items():
+                    error_floor = 1 / (m["distributed"] * n["distributed"] * epoch) + 1 / ( (1-lambd)**2 * m["distributed"]**2 * epoch**2 )
+                    print(f"{algo:<5}: Error floor: {error_floor} ({net})")
+
+            elif algo == "DRR":
+                for net, lambd in net_lambda.items():
+                    error_floor = 1 / ( (1-lambd)**3 * m["distributed"] * epoch**2 )
+                    print(f"{algo:<5}: Error floor: {error_floor} ({net})")
+
+            elif algo == "DSGT":
+                for net, lambd in net_lambda.items():
+                    error_floor = 1 / (m["distributed"] * n["distributed"] * epoch) + 1 / ( (1-lambd)**3 * m["distributed"]**2 * epoch**2 )
+                    print(f"{algo:<5}: Error floor: {error_floor} ({net})")
+
+            elif algo == "GT-RR":
+                for net, lambd in net_lambda.items():
+                    error_floor = 1 / ( (1-lambd) * m["distributed"] * epoch**2 ) + 1 / ( (1-lambd)**2 * epoch**4 )
+                    print(f"{algo:<5}: Error floor: {error_floor} ({net})")
+
+
+def try_geo():
+    node_num = 16
+    matrices = []
+    norms = []
+    for i in range(1000):
+        undir_graph = Geometric_graph(
+            node_num
+        ).undirected(0.8)
+
+        communication_matrix = Weight_matrix(undir_graph).row_stochastic()
+        communication_matrix = convert_to_doubly_stochastic(communication_matrix, int(1e4), 1e-7)
+        norms.append(spectral_norm(communication_matrix))
+
+    print(f"max norm = {max(norms)}")
+    print(f"min norm = {min(norms)}")
+    print(f"avg norm = {sum(norms)/len(norms)}")
+    print(f"{'-'*50}")
