@@ -20,7 +20,7 @@ from Problems.log_reg_cifar import LR_L4
 from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
 from utilities import (
-    load_state, plot_figure_path, convert_to_doubly_stochastic
+    load_state, plot_figure_path, convert_to_doubly_stochastic, spectral_norm, print_matrix, fix_lambda_transformation
 )
 from ExponentialNet import centralized_algo, decentralized_algo
 
@@ -29,7 +29,7 @@ np.random.seed(0)
 """
 Data processing for MNIST
 """
-node_num = 4  ## number of nodes
+node_num = 16  ## number of nodes
 logis_model = LR_L2(
     node_num, limited_labels=False, balanced=True
 )  ## instantiate the problem class
@@ -46,7 +46,7 @@ model_para_central = np.random.normal(
 )  # initialize the model parameter for central algorithms
 model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
 
-graph = "grid"  # "exponential", "grid", "geometric
+graph = "geometric"  # "exponential", "grid", "geometric
 if graph == "exponential":
     undir_graph = Exponential_graph(
         node_num
@@ -62,9 +62,9 @@ elif graph == "geometric":
 #     undir_graph
 # ).column_stochastic()  # generate the communication matrix
 communication_matrix = Weight_matrix(undir_graph).row_stochastic()
-# communication_matrix = convert_to_doubly_stochastic(communication_matrix)
-communication_rounds = [
-    1, 20
+communication_matrix = convert_to_doubly_stochastic(communication_matrix, int(1e4), 1e-7)
+communication_rounds = [    # TODO: one shot communication
+    1
 ]  # list of number of communication rounds for decentralized algorithms experiments
 comm_type = "graph_avg" # "graph_avg", "all_avg", "no_comm"
 
@@ -110,12 +110,12 @@ line_formats = [  # list of line formats for plotting
     "-|y",
     "-_r",
 ]
-exp_name = "grid_doubly"
+exp_name = f"test"
 exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{exp_name}"  # path to save the experiment results
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
 init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
-plot_every = 50  # plot every 250 epochs
-save_every = 500  # save the model parameter every 5000 epochs
+plot_every = 50  # plot every 50 epochs
+save_every = 500  # save the model parameter every 500 epochs
 plot_first = 1000  # plot the first 1000 epochs
 
 """
@@ -149,6 +149,8 @@ print(f"CEPOCH base = {CEPOCH_base}")
 print(f"DEPOCH base {DEPOCH_base}")
 print(f"communication rounds = {communication_rounds}")
 print(f"communication type = {comm_type}")
+print_matrix(communication_matrix)
+print(f"spec norm = {spectral_norm(communication_matrix)}")
 print(f"C lr = {C_lr}")
 print(f"D lr = {D_lr}")
 print(f"C batch size = {C_batch_size}")
