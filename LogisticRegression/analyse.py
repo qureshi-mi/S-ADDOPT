@@ -1,3 +1,4 @@
+
 import numpy as np
 from utilities import (
     save_npy,
@@ -5,9 +6,18 @@ from utilities import (
     load_state,
     loadPathAndPlot,
     loadGapAndPlot,
-    plot_figure_path
+    plot_figure_path,
+    spectral_norm,
+    print_matrix,
+    fix_lambda_transformation,
+    convert_to_doubly_stochastic,
+    is_primitive,
+    try_geo,
 )
 from Problems.logistic_regression import LR_L2
+from graph import Weight_matrix, Geometric_graph, Exponential_graph, Grid_graph
+import math
+
 
 exp_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/opt_CRR_reg01"
 line_formats = [
