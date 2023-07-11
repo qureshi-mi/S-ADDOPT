@@ -109,6 +109,19 @@ class Exponential_graph:
             for j in neighbors:
                 D[i][j] = 1
         return D
+    
+
+class Fully_connected_graph:
+    def __init__(self,number_of_nodes):
+        self.size = number_of_nodes
+    
+    def undirected(self):
+        U = np.ones( (self.size,self.size) )
+        for i in range( self.size ):
+            for j in range( self.size ):
+                U[i][j] = 1
+        return U
+
 
 """
 This class generates all kinds of weight matrices of interest
