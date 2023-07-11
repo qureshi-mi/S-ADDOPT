@@ -13,14 +13,14 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from datetime import datetime
 from matplotlib.font_manager import FontProperties
-from graph import Weight_matrix, Geometric_graph, Exponential_graph, Grid_graph
+from graph import Weight_matrix, Geometric_graph, Exponential_graph, Grid_graph, Fully_connected_graph
 from analysis import error
 from Problems.logistic_regression import LR_L2
 from Problems.log_reg_cifar import LR_L4
 from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
 from utilities import (
-    load_state, plot_figure_path, convert_to_doubly_stochastic, spectral_norm, print_matrix, fix_lambda_transformation
+    load_state, plot_figure_path, convert_to_doubly_stochastic, spectral_norm, print_matrix, fix_lambda_transformation, init_comm_matrix
 )
 from ExponentialNet import centralized_algo, decentralized_algo
 
@@ -30,6 +30,8 @@ np.random.seed(0)
 Data processing for MNIST
 """
 node_num = 16  ## number of nodes
+node_num = int(input("Enter number of nodes: "))
+
 logis_model = LR_L2(
     node_num, limited_labels=False, balanced=True
 )  ## instantiate the problem class
@@ -46,23 +48,9 @@ model_para_central = np.random.normal(
 )  # initialize the model parameter for central algorithms
 model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
 
-graph = "geometric"  # "exponential", "grid", "geometric
-if graph == "exponential":
-    undir_graph = Exponential_graph(
-        node_num
-    ).undirected()  # generate the undirected graph
-elif graph == "grid":
-    undir_graph = Grid_graph(int(math.sqrt(node_num))).undirected()
-elif graph == "geometric":
-    undir_graph = Geometric_graph(
-        node_num
-    ).undirected(0.8)
-
-# communication_matrix = Weight_matrix(
-#     undir_graph
-# ).column_stochastic()  # generate the communication matrix
-communication_matrix = Weight_matrix(undir_graph).row_stochastic()
-communication_matrix = convert_to_doubly_stochastic(communication_matrix, int(1e4), 1e-7)
+graph = ""  # "exponential", "grid", "geometric
+comm_load_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"  # "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
+communication_matrix = init_comm_matrix(node_num, graph, comm_load_path)
 communication_rounds = [    # TODO: one shot communication
     1
 ]  # list of number of communication rounds for decentralized algorithms experiments
@@ -110,8 +98,8 @@ line_formats = [  # list of line formats for plotting
     "-|y",
     "-_r",
 ]
-exp_name = f"test"
-exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{exp_name}"  # path to save the experiment results
+exp_name = f"nodes_{node_num}"
+exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/vary_mn_geo_lambda/{exp_name}"  # path to save the experiment results
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
 init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
 plot_every = 50  # plot every 50 epochs
@@ -129,9 +117,8 @@ error_lr_0 = error(
 )  # instantiate the error class
 
 
-# if os.path.exists(f"{exp_log_path}/DSGD"):
-#     print("experiments have been done")
-#     exit()
+if not os.path.exists(f"{exp_log_path}"):
+    os.makedirs(f"{exp_log_path}")
 
 newYorkTz = pytz.timezone("America/New_York")
 timeInNewYork = datetime.now(newYorkTz)
@@ -149,7 +136,7 @@ print(f"CEPOCH base = {CEPOCH_base}")
 print(f"DEPOCH base {DEPOCH_base}")
 print(f"communication rounds = {communication_rounds}")
 print(f"communication type = {comm_type}")
-print_matrix(communication_matrix)
+print_matrix(communication_matrix, "communication matrix")
 print(f"spec norm = {spectral_norm(communication_matrix)}")
 print(f"C lr = {C_lr}")
 print(f"D lr = {D_lr}")
