@@ -17,7 +17,15 @@ from Problems.logistic_regression import LR_L2
 from Problems.log_reg_cifar import LR_L4
 from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
-from utilities import plot_figure_path, save_npy, save_state, load_state, initDir, load_optimal
+from utilities import (
+    plot_figure_path,
+    save_npy,
+    save_state,
+    load_state,
+    initDir,
+    load_optimal,
+)
+
 
 def centralized_algo(
     logis_model,
@@ -62,11 +70,17 @@ def centralized_algo(
         legends.append(f"{algo}: bz = {bz}, lr = {lr}")
         model_para = model_para_cp
 
-        if os.path.exists(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"):
-            print(f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy")
+        if os.path.exists(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"
+        ):
+            print(
+                f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"
+            )
             continue
         if train_load:
-            model_para = load_optimal(exp_save_path, f"{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy")
+            model_para = load_optimal(
+                exp_save_path, f"{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy"
+            )
 
         if algo == "SGD":
             theta, theta_opt, F_opt = copt.SGD(
@@ -97,18 +111,27 @@ def centralized_algo(
                 stop_at_converge=stop_at_convergence,
             )
 
-        np.save(f"{exp_save_path}/{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy", theta_opt)
+        np.save(
+            f"{exp_save_path}/{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy",
+            theta_opt,
+        )
 
         res_F = error_lr.cost_gap_path(theta, gap_type="theta")
-        np.save(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy", res_F)
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy",
+            res_F,
+        )
         res_F_F = error_lr.cost_gap_path(theta, gap_type="F")
-        np.save(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy", res_F_F)
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy", res_F_F
+        )
 
         if save_theta_path:
-            np.save(f"{exp_save_path}/{algo}_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy", theta)
+            np.save(
+                f"{exp_save_path}/{algo}_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy",
+                theta,
+            )
 
-        
-        
     plot_figure_path(
         exp_save_path,
         exp_names,
@@ -120,16 +143,20 @@ def centralized_algo(
     )
     plot_figure_path(
         exp_save_path,
-        [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy" for idx, (epoch, bz, lr) in enumerate(params)],
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy"
+            for idx, (epoch, bz, lr) in enumerate(params)
+        ],
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
         plot_every,
         plot_first,
     )
-    
-    exp_names = [f"central_{algo}/{name}"  for name in exp_names]
+
+    exp_names = [f"central_{algo}/{name}" for name in exp_names]
     return exp_names, legends
+
 
 def decentralized_algo(
     logis_model,
@@ -180,11 +207,17 @@ def decentralized_algo(
         legends.append(f"{algo}: bz = {bz}, ur = {cr}, lr = {lr}")
         model_para = model_para_cp
 
-        if os.path.exists(f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"):
-            print(f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy")
+        if os.path.exists(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"
+        ):
+            print(
+                f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"
+            )
             continue
         if train_load:
-            model_para = load_optimal(exp_save_path, f"{algo}_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy")
+            model_para = load_optimal(
+                exp_save_path, f"{algo}_opt_theta_bz{bz}_lr{lr:.6f}_ur{cr}.npy"
+            )
 
         if algo == "DSGD":
             theta_D = dopt.D_SGD(
@@ -228,14 +261,19 @@ def decentralized_algo(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy",
             res_F_D,
         )
-        res_F_D_F = error_lr.cost_gap_path(np.sum(theta_D, axis=1) / logis_model.n, gap_type="F")
+        res_F_D_F = error_lr.cost_gap_path(
+            np.sum(theta_D, axis=1) / logis_model.n, gap_type="F"
+        )
         np.save(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy",
             res_F_D_F,
         )
 
         if save_theta_path:
-            np.save(f"{exp_save_path}/{algo}_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}.npy", theta_D)
+            np.save(
+                f"{exp_save_path}/{algo}_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}.npy",
+                theta_D,
+            )
 
     plot_figure_path(
         exp_save_path,
@@ -248,7 +286,10 @@ def decentralized_algo(
     )
     plot_figure_path(
         exp_save_path,
-        [f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy" for idx, (epoch, bz, lr, cr) in enumerate(params)],
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy"
+            for idx, (epoch, bz, lr, cr) in enumerate(params)
+        ],
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
@@ -256,5 +297,5 @@ def decentralized_algo(
         plot_first,
     )
 
-    exp_names = [f"{algo}/{name}"  for name in exp_names]
+    exp_names = [f"{algo}/{name}" for name in exp_names]
     return exp_names, legends

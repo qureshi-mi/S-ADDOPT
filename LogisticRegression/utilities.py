@@ -40,7 +40,9 @@ def save_npy(npys, root_path, exp_name):
         np.save(f"{root_path}/{exp_name[i]}.npy", array)
 
 
-def plot_figure_path(exp_save_path, exp_names, formats, legend, save_path, plot_every, plot_first):
+def plot_figure_path(
+    exp_save_path, exp_names, formats, legend, save_path, plot_every, plot_first
+):
     print("plotting the figure...", flush=True)
     plt.clf()
     mark_every = 1
@@ -52,12 +54,12 @@ def plot_figure_path(exp_save_path, exp_names, formats, legend, save_path, plot_
 
     for i, name in enumerate(exp_names):
         line = np.load(f"{exp_save_path}/{name}")
-        xaxis = np.linspace(0, len(line)-1, num=len(line), dtype=int)
-        yaxis = [abs(point) for point in  line[:plot_first:plot_every]]   # the F_val could be negative
+        xaxis = np.linspace(0, len(line) - 1, num=len(line), dtype=int)
+        yaxis = [
+            abs(point) for point in line[:plot_first:plot_every]
+        ]  # the F_val could be negative
         if i >= len(formats):
-            plt.plot(
-                xaxis[:plot_first:plot_every], yaxis, markevery=mark_every
-            )
+            plt.plot(xaxis[:plot_first:plot_every], yaxis, markevery=mark_every)
         else:
             plt.plot(
                 xaxis[:plot_first:plot_every], yaxis, formats[i], markevery=mark_every
@@ -74,6 +76,7 @@ def plot_figure_path(exp_save_path, exp_names, formats, legend, save_path, plot_
     plt.savefig(save_path, format="pdf", dpi=4000, bbox_inches="tight")
     print("figure plotted...")
 
+
 def plot_figure_data(data, formats, legend, save_path, plot_every):
     print("plotting the figure...", flush=True)
     plt.clf()
@@ -85,16 +88,14 @@ def plot_figure_data(data, formats, legend, save_path, plot_every):
     plt.figure(3)
 
     for i, line in enumerate(data):
-        xaxis = np.linspace(0, len(line)-1, num=len(line), dtype=int)
-        yaxis = [abs(point) for point in  line[::plot_every]]   # the F_val could be negative
+        xaxis = np.linspace(0, len(line) - 1, num=len(line), dtype=int)
+        yaxis = [
+            abs(point) for point in line[::plot_every]
+        ]  # the F_val could be negative
         if i >= len(formats):
-            plt.plot(
-                xaxis[::plot_every], yaxis, markevery=mark_every
-            )
+            plt.plot(xaxis[::plot_every], yaxis, markevery=mark_every)
         else:
-            plt.plot(
-                xaxis[::plot_every], yaxis, formats[i], markevery=mark_every
-            )
+            plt.plot(xaxis[::plot_every], yaxis, formats[i], markevery=mark_every)
 
     plt.legend(legend, prop=font2)
     plt.grid(True)
@@ -107,6 +108,7 @@ def plot_figure_data(data, formats, legend, save_path, plot_every):
     plt.savefig(save_path, format="pdf", dpi=4000, bbox_inches="tight")
     print("figure plotted...")
 
+
 def save_state(theta, save_path, exp_name):
     print("saving experiment results...")
     np.save(f"{save_path}/{exp_name}_theta", theta)
@@ -116,7 +118,10 @@ def load_state(save_path, exp_name, type="optimal"):
     print("loading experiment results...")
     if type == "path":
         theta = np.load(f"{save_path}/{exp_name}_theta_path.npy")
-        return theta, theta[-1]  # return the state sequence and the last state (optimum)
+        return (
+            theta,
+            theta[-1],
+        )  # return the state sequence and the last state (optimum)
     elif type == "optimal":
         theta = np.load(f"{save_path}/{exp_name}_theta_optimal.npy")
         return None, theta  # return the last state (optimum)
@@ -124,9 +129,11 @@ def load_state(save_path, exp_name, type="optimal"):
         theta = np.load(save_path)
         return None, theta
 
+
 def load_optimal(save_path, exp_name):
     return np.load(f"{save_path}/{exp_name}")
-    
+
+
 def loadPathAndPlot(save_path, exp_names, error_lr, plot_every):
     load_thetas = []
     print("loading theta training results...")
@@ -140,39 +147,56 @@ def loadPathAndPlot(save_path, exp_names, error_lr, plot_every):
         ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3C", "-4w"],
         [f"optimum{i}" for i in range(len(exp_names))],
         f"{save_path}/cost_gap_all.pdf",
-        plot_every
+        plot_every,
     )
+
 
 def loadGapAndPlot(save_path, exp_names, legands, plot_every, fig_name):
     gaps = []
     print("loading error gap results...")
     for i, name in enumerate(exp_names):
         gaps.append(np.load(f"{save_path}/{name}.npy"))
-    
+
     # gaps = [gap[:5000] for gap in gaps]
 
     print("plotting error gap results...")
     plot_figure(
         gaps,
-        ["-vb", "-^m", "-dy", "-sr", "-1k", "-2g", "-3r", "-.kp", "-+c", "-xm", "-|y", "-_r"],
+        [
+            "-vb",
+            "-^m",
+            "-dy",
+            "-sr",
+            "-1k",
+            "-2g",
+            "-3r",
+            "-.kp",
+            "-+c",
+            "-xm",
+            "-|y",
+            "-_r",
+        ],
         legands,
         f"{save_path}/{fig_name}.pdf",
-        plot_every
+        plot_every,
     )
+
 
 def load_optimum(pr, save_path, exp_name):
     theta, theta_opt = load_state(save_path, exp_name)
     error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
     return error_lr
 
+
 def initDir(dir_path):
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
 
+
 def convert_to_doubly_stochastic(matrix, max_iterations=100, tolerance=1e-6):
     """
     The Sinkhorn-Knopp algorithm.
-    
+
     Converts the given matrix to a doubly stochastic matrix.
     The conversion is done in-place.
 
@@ -202,6 +226,7 @@ def convert_to_doubly_stochastic(matrix, max_iterations=100, tolerance=1e-6):
 
     return matrix
 
+
 def spectral_norm(comm_matrix):
     # ones matrix
     ones = np.ones(comm_matrix.shape)
@@ -221,6 +246,7 @@ def spectral_norm(comm_matrix):
 
     return spectral_norm
 
+
 def print_matrix(matrix, name):
     print(f"{name} Matrix:")
     for row in matrix:
@@ -231,6 +257,7 @@ def print_matrix(matrix, name):
                 print(f" {element:.3f}", end=" ")
         print()
     print()
+
 
 def is_primitive(matrix, max_iterations=10000):
     n = matrix.shape[0]  # Assuming matrix is a square matrix
@@ -245,6 +272,7 @@ def is_primitive(matrix, max_iterations=10000):
         power_counter += 1
 
     return False
+
 
 def convergence_analysis():
     lr_constant = False
@@ -269,7 +297,7 @@ def convergence_analysis():
 
     if lr_constant:
         # Constant learning rate
-        lr = 1/8000
+        lr = 1 / 8000
 
         for algo in algos:
             if algo == "SGD":
@@ -282,27 +310,34 @@ def convergence_analysis():
 
             elif algo == "DSGD":
                 for net, lambd in net_lambda.items():
-                    error_floor = lr / n["distributed"] + lr**2 / (1-lambd)**2
+                    error_floor = lr / n["distributed"] + lr**2 / (1 - lambd) ** 2
                     print(f"{algo:<5}: Error floor: {error_floor} ({net})")
 
             elif algo == "DRR":
                 for net, lambd in net_lambda.items():
-                    error_floor = lr**2 * m["distributed"] / (1-lambd)**3
+                    error_floor = lr**2 * m["distributed"] / (1 - lambd) ** 3
                     print(f"{algo:<5}: Error floor: {error_floor} ({net})")
 
             elif algo == "DSGT":
                 for net, lambd in net_lambda.items():
-                    error_floor = lr / n["distributed"] + lr**2 / (1-lambd) + lr**4 / (n["distributed"] * (1-lambd)**4)
+                    error_floor = (
+                        lr / n["distributed"]
+                        + lr**2 / (1 - lambd)
+                        + lr**4 / (n["distributed"] * (1 - lambd) ** 4)
+                    )
                     print(f"{algo:<5}: Error floor: {error_floor} ({net})")
 
             elif algo == "GT-RR":
                 for net, lambd in net_lambda.items():
-                    error_floor = lr**2 * m["distributed"] / (1-lambd) + lr**4 * m["distributed"]**4 / (1-lambd)**2
+                    error_floor = (
+                        lr**2 * m["distributed"] / (1 - lambd)
+                        + lr**4 * m["distributed"] ** 4 / (1 - lambd) ** 2
+                    )
                     print(f"{algo:<5}: Error floor: {error_floor} ({net})")
 
     else:
         # Decreasing learning rate
-        lr = lambda t: 1 / (50*t + 400)
+        lr = lambda t: 1 / (50 * t + 400)
 
         for algo in algos:
             if algo == "SGD":
@@ -315,22 +350,28 @@ def convergence_analysis():
 
             elif algo == "DSGD":
                 for net, lambd in net_lambda.items():
-                    error_floor = 1 / (m["distributed"] * n["distributed"] * epoch) + 1 / ( (1-lambd)**2 * m["distributed"]**2 * epoch**2 )
+                    error_floor = 1 / (
+                        m["distributed"] * n["distributed"] * epoch
+                    ) + 1 / ((1 - lambd) ** 2 * m["distributed"] ** 2 * epoch**2)
                     print(f"{algo:<5}: Error floor: {error_floor} ({net})")
 
             elif algo == "DRR":
                 for net, lambd in net_lambda.items():
-                    error_floor = 1 / ( (1-lambd)**3 * m["distributed"] * epoch**2 )
+                    error_floor = 1 / ((1 - lambd) ** 3 * m["distributed"] * epoch**2)
                     print(f"{algo:<5}: Error floor: {error_floor} ({net})")
 
             elif algo == "DSGT":
                 for net, lambd in net_lambda.items():
-                    error_floor = 1 / (m["distributed"] * n["distributed"] * epoch) + 1 / ( (1-lambd)**3 * m["distributed"]**2 * epoch**2 )
+                    error_floor = 1 / (
+                        m["distributed"] * n["distributed"] * epoch
+                    ) + 1 / ((1 - lambd) ** 3 * m["distributed"] ** 2 * epoch**2)
                     print(f"{algo:<5}: Error floor: {error_floor} ({net})")
 
             elif algo == "GT-RR":
                 for net, lambd in net_lambda.items():
-                    error_floor = 1 / ( (1-lambd) * m["distributed"] * epoch**2 ) + 1 / ( (1-lambd)**2 * epoch**4 )
+                    error_floor = 1 / (
+                        (1 - lambd) * m["distributed"] * epoch**2
+                    ) + 1 / ((1 - lambd) ** 2 * epoch**4)
                     print(f"{algo:<5}: Error floor: {error_floor} ({net})")
 
 
@@ -344,15 +385,15 @@ def try_geo(save_path):
 
     print("generating matrices...", flush=True)
     for node_num in nodes_list:
-        print(f"node_num = {node_num}", flush=True) 
+        print(f"node_num = {node_num}", flush=True)
         mat = []
         for i in range(search_space):
-            undir_graph = Geometric_graph(
-                node_num
-            ).undirected(0.8)
+            undir_graph = Geometric_graph(node_num).undirected(0.8)
 
             communication_matrix = Weight_matrix(undir_graph).row_stochastic()
-            communication_matrix = convert_to_doubly_stochastic(communication_matrix, int(1e4), 1e-7)
+            communication_matrix = convert_to_doubly_stochastic(
+                communication_matrix, int(1e4), 1e-7
+            )
 
             norm = spectral_norm(communication_matrix)
             mat.append((node_num, communication_matrix, norm))
@@ -380,7 +421,7 @@ def try_geo(save_path):
     print(f"min_dist = {min_dist} (1)", flush=True)
     print(f"lambdas = {min_dist_tup[0][2]}, {min_dist_tup[1][2]}", flush=True)
     print("time elapsed: ", time.time() - start, flush=True)
-    
+
     print("searching for min distance... (2)", flush=True)
     min_dist = 1e10
     min_dist_tup = None
@@ -388,16 +429,19 @@ def try_geo(save_path):
     for idx3, mat3 in enumerate(matrices_lambda[2]):
         dist1 = abs(mat3[2] - min_dist_list[-1][0][2])
         dist2 = abs(mat3[2] - min_dist_list[-1][1][2])
-        dist = min(dist1, dist2)        
+        dist = min(dist1, dist2)
         if dist < min_dist:
             min_dist = dist
             min_dist_tup = (*min_dist_list[-1], mat3)
             min_dist_list_2.append(min_dist_tup)
         if idx3 % (search_space / 10) == 0:
             print(f"{idx3 / search_space * 100}% completed", flush=True)
-    
+
     print(f"min_dist = {min_dist} (2)", flush=True)
-    print(f"lambdas = {min_dist_tup[0][2]}, {min_dist_tup[1][2]}, {min_dist_tup[2][2]}", flush=True)
+    print(
+        f"lambdas = {min_dist_tup[0][2]}, {min_dist_tup[1][2]}, {min_dist_tup[2][2]}",
+        flush=True,
+    )
     print("time elapsed: ", time.time() - start, flush=True)
 
     # save the closest 100 matrices
@@ -405,20 +449,21 @@ def try_geo(save_path):
     if not os.path.exists(f"{save_path}/geo"):
         os.mkdir(f"{save_path}/geo")
 
-    for idx, tup in enumerate(min_dist_list_2[-min(100, len(min_dist_list_2)):]):
+    for idx, tup in enumerate(min_dist_list_2[-min(100, len(min_dist_list_2)) :]):
         np.save(f"{save_path}/geo/geo_{idx}_node{nodes_list[0]}", tup[0][1])
         np.save(f"{save_path}/geo/geo_{idx}_node{nodes_list[1]}", tup[1][1])
         np.save(f"{save_path}/geo/geo_{idx}_node{nodes_list[2]}", tup[2][1])
 
     # save the closest 100 lambdas
     print("saving lambdas...", flush=True)
-    for idx, tup in enumerate(min_dist_list_2[-min(100, len(min_dist_list_2)):]):
+    for idx, tup in enumerate(min_dist_list_2[-min(100, len(min_dist_list_2)) :]):
         np.save(f"{save_path}/geo/geo_{idx}_node{nodes_list[0]}_lambda", tup[0][2])
         np.save(f"{save_path}/geo/geo_{idx}_node{nodes_list[1]}_lambda", tup[1][2])
         np.save(f"{save_path}/geo/geo_{idx}_node{nodes_list[2]}_lambda", tup[2][2])
-    
+
     print(f"Time elapsed: {time.time() - start}", flush=True)
     print("done", flush=True)
+
 
 def init_comm_matrix(node_num, graph, load_path=None):
     if load_path is None:
@@ -429,21 +474,19 @@ def init_comm_matrix(node_num, graph, load_path=None):
         elif graph == "grid":
             undir_graph = Grid_graph(int(math.sqrt(node_num))).undirected()
         elif graph == "geometric":
-            undir_graph = Geometric_graph(
-                node_num
-            ).undirected(0.8)
+            undir_graph = Geometric_graph(node_num).undirected(0.8)
         elif graph == "fully_connected":
-            undir_graph = Fully_connected_graph(
-                node_num
-            ).undirected()
+            undir_graph = Fully_connected_graph(node_num).undirected()
 
         # communication_matrix = Weight_matrix(
         #     undir_graph
         # ).column_stochastic()  # generate the communication matrix
         communication_matrix = Weight_matrix(undir_graph).row_stochastic()
-        communication_matrix = convert_to_doubly_stochastic(communication_matrix, int(1e4), 1e-7)
+        communication_matrix = convert_to_doubly_stochastic(
+            communication_matrix, int(1e4), 1e-7
+        )
     else:
         communication_matrix = np.load(load_path)
         print(f"loaded communication matrix from {load_path}")
-    
+
     return communication_matrix

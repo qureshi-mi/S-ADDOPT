@@ -13,14 +13,26 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from datetime import datetime
 from matplotlib.font_manager import FontProperties
-from graph import Weight_matrix, Geometric_graph, Exponential_graph, Grid_graph, Fully_connected_graph
+from graph import (
+    Weight_matrix,
+    Geometric_graph,
+    Exponential_graph,
+    Grid_graph,
+    Fully_connected_graph,
+)
 from analysis import error
 from Problems.logistic_regression import LR_L2
 from Problems.log_reg_cifar import LR_L4
 from Optimizers import COPTIMIZER as copt
 from Optimizers import DOPTIMIZER as dopt
 from utilities import (
-    load_state, plot_figure_path, convert_to_doubly_stochastic, spectral_norm, print_matrix, fix_lambda_transformation, init_comm_matrix
+    load_state,
+    plot_figure_path,
+    convert_to_doubly_stochastic,
+    spectral_norm,
+    print_matrix,
+    # fix_lambda_transformation,
+    init_comm_matrix,
 )
 from ExponentialNet import centralized_algo, decentralized_algo
 
@@ -48,13 +60,13 @@ model_para_central = np.random.normal(
 )  # initialize the model parameter for central algorithms
 model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
 
-graph = ""  # "exponential", "grid", "geometric
-comm_load_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"  # "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
+graph = "exponential"  # "exponential", "grid", "geometric
+comm_load_path = None  # f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
 communication_matrix = init_comm_matrix(node_num, graph, comm_load_path)
-communication_rounds = [    # TODO: one shot communication
+communication_rounds = [  # TODO: one shot communication
     1
 ]  # list of number of communication rounds for decentralized algorithms experiments
-comm_type = "graph_avg" # "graph_avg", "all_avg", "no_comm"
+comm_type = "graph_avg"  # "graph_avg", "all_avg", "no_comm"
 
 C_algos = []  # "SGD", "CRR"
 D_algos = ["DSGD", "DRR"]  # "DSGD", "DRR"
@@ -99,7 +111,7 @@ line_formats = [  # list of line formats for plotting
     "-_r",
 ]
 exp_name = f"nodes_{node_num}"
-exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/vary_mn_geo_lambda/{exp_name}"  # path to save the experiment results
+exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/vary_mn_exp_lambda/{exp_name}"  # path to save the experiment results
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
 init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
 plot_every = 50  # plot every 50 epochs
