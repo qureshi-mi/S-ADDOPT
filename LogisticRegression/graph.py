@@ -133,6 +133,30 @@ class Fully_connected_graph:
         return U
 
 
+class Erdos_Renyi_graph:
+    def __init__(self, number_of_nodes, epsilon):
+        self.size = number_of_nodes
+        self.p = (1+epsilon) * np.log(self.size) / self.size
+        assert self.p < 1
+        assert self.p > 0
+        assert epsilon > 0
+
+    def undirected(self):
+        connected = False
+        while not connected:
+            U = np.zeros((self.size, self.size))
+            for i in range(self.size):
+                for j in range(i + 1, self.size):
+                    roll = np.random.uniform(0, 1)
+                    if roll < self.p:
+                        U[i][j] = 1
+                        U[j][i] = 1
+
+            if LA.matrix_power(U, self.size - 1).all() > 0: ## strongly connected adjacency matrix
+                connected = True
+        return U
+
+
 """
 This class generates all kinds of weight matrices of interest
 """
@@ -205,3 +229,17 @@ class Weight_matrix:
         mat_A = A / colsum
         mat_B = np.asarray(mat_A)
         return mat_B
+
+    def metroplis_weights(self):
+        M = np.zeros((self.size, self.size))
+        for i in range(self.size):
+            for j in range(self.size):
+                if i != j and self.adj[i][j] != 0:
+                    M[i][j] = 1 / (max(self.degree[i], self.degree[j]))
+        
+        for i in range(self.size):
+            M[i][i] = 0
+            for j in range(self.size):
+                if i != j and self.adj[i][j] != 0:
+                    M[i][i] += max(0, 1/self.degree[i] - 1/self.degree[j])
+        return M

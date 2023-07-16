@@ -466,6 +466,13 @@ def try_geo(save_path):
 
 
 def init_comm_matrix(node_num, graph, load_path=None):
+    """
+    This function initializes the communication matrix
+
+    :param node_num: number of nodes
+    :param graph: type of graph (exponential, grid, geometric, fully_connected, erdos_renyi)
+    :param load_path: path to load the communication matrix
+    """
     if load_path is None:
         if graph == "exponential":
             undir_graph = Exponential_graph(
@@ -477,16 +484,98 @@ def init_comm_matrix(node_num, graph, load_path=None):
             undir_graph = Geometric_graph(node_num).undirected(0.8)
         elif graph == "fully_connected":
             undir_graph = Fully_connected_graph(node_num).undirected()
+        elif graph == "erdos_renyi":
+            undir_graph = Erdos_Renyi_graph(node_num, 0.1).undirected()
 
-        # communication_matrix = Weight_matrix(
-        #     undir_graph
-        # ).column_stochastic()  # generate the communication matrix
-        communication_matrix = Weight_matrix(undir_graph).row_stochastic()
-        communication_matrix = convert_to_doubly_stochastic(
-            communication_matrix, int(1e4), 1e-7
-        )
+        if graph in ["exponential", "grid", "geometric", "fully_connected"]:
+            communication_matrix = Weight_matrix(undir_graph).row_stochastic()
+            communication_matrix = convert_to_doubly_stochastic(
+                communication_matrix, int(1e4), 1e-7
+            )
+        elif graph in ["erdos_renyi"]:
+            communication_matrix = Weight_matrix(undir_graph).metroplis_weights()
+
     else:
         communication_matrix = np.load(load_path)
         print(f"loaded communication matrix from {load_path}")
 
     return communication_matrix
+
+
+def is_doubly_stochastic(matrix):
+    """
+    Checks if the given matrix is doubly stochastic.
+
+    @param matrix: The matrix to be checked.
+    @return: True if the matrix is doubly stochastic, False otherwise.
+    """
+    n = matrix.shape[0]  # Assuming matrix is a square matrix
+
+    # Check if all row sums are 1
+    row_sums = np.sum(matrix, axis=1)
+    if not np.allclose(row_sums, np.ones(n)):
+        print("row_sums: ", row_sums)
+        return False
+
+    # Check if all column sums are 1
+    col_sums = np.sum(matrix, axis=0)
+    if not np.allclose(col_sums, np.ones(n)):
+        print("col_sums: ", col_sums)
+        return False
+
+    return True
+
+
+def fix_lambda_transformation(comm_matrix, lambd, max_iterations=2, tolerance=1e-6):
+    """
+    This function transforms the communication matrix to a new communication matrix with a given lambda
+
+    :param comm_matrix: the communication matrix
+    :param lambd: the given lambda
+    :return: the new communication matrix
+    """
+    # ones matrix
+    ones = np.ones(comm_matrix.shape)
+    matrix = comm_matrix - ones / comm_matrix.shape[0]
+
+    # Calculate the eigenvalues of A^T * A
+    eigenvalues, eigenvectors = np.linalg.eig(comm_matrix)
+    # print_matrix(comm_matrix, "comm_matrix")
+    # print("eigenvalues: ", eigenvalues)
+    # print_matrix(eigenvectors, "eigenvectors")
+
+    # generate new eigenvalues
+    for i in range(max_iterations):
+        new_eigenvalues = np.zeros(comm_matrix.shape[0])
+        new_eigenvalues[0] = 1
+        new_eigenvalues[1] = lambd
+        for j in range(2, comm_matrix.shape[0]):
+            if eigenvalues[j] > 0:
+                bound = min(eigenvalues[j], lambd)
+                new_eigenvalues[j] = np.random.uniform(0, bound)
+            else:
+                bound = max(eigenvalues[j], -lambd)
+                new_eigenvalues[j] = np.random.uniform(bound, 0)
+
+        # construct new matrix
+        new_matrix = np.matmul(
+            np.matmul(eigenvectors, np.diag(new_eigenvalues)), eigenvectors.T
+        )
+        # print(f"new_matrix is primitive after {i} iterations")
+        # print_matrix(new_matrix, "new_matrix")
+        # print("is_doubly_stochastic(new_matrix): ", is_doubly_stochastic(new_matrix))
+        # print("is_primitive(new_matrix): ", is_primitive(new_matrix))
+        # print()
+
+        if is_primitive(new_matrix):
+            print(f"new_matrix is primitive after {i} iterations")
+            print_matrix(new_matrix, "new_matrix")
+            print(
+                "is_doubly_stochastic(new_matrix): ", is_doubly_stochastic(new_matrix)
+            )
+            print("is_primitive(new_matrix): ", is_primitive(new_matrix))
+            print()
+
+            return True, new_matrix
+
+    return False, None

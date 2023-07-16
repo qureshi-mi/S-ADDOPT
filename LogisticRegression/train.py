@@ -41,8 +41,8 @@ np.random.seed(0)
 """
 Data processing for MNIST
 """
-node_num = 16  ## number of nodes
-node_num = int(input("Enter number of nodes: "))
+node_num = 25  ## number of nodes
+# node_num = int(input("Enter number of nodes: "))
 
 logis_model = LR_L2(
     node_num, limited_labels=False, balanced=True
@@ -60,8 +60,8 @@ model_para_central = np.random.normal(
 )  # initialize the model parameter for central algorithms
 model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
 
-graph = "exponential"  # "exponential", "grid", "geometric
-comm_load_path = None  # f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
+graph = "Erdos_Renyi_graph"  # "exponential", "grid", "geometric
+comm_load_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/comm_matrix/comm_matrix_{node_num}.npy"  # f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
 communication_matrix = init_comm_matrix(node_num, graph, comm_load_path)
 communication_rounds = [  # TODO: one shot communication
     1
@@ -110,8 +110,8 @@ line_formats = [  # list of line formats for plotting
     "-|y",
     "-_r",
 ]
-exp_name = f"nodes_{node_num}"
-exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/vary_mn_exp_lambda/{exp_name}"  # path to save the experiment results
+exp_name = f"mat{node_num}"
+exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/comm_matrix/{exp_name}"  # path to save the experiment results
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
 init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
 plot_every = 50  # plot every 50 epochs

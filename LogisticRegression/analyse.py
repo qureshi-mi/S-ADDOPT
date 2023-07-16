@@ -9,15 +9,38 @@ from utilities import (
     plot_figure_path,
     spectral_norm,
     print_matrix,
-    fix_lambda_transformation,
     convert_to_doubly_stochastic,
     is_primitive,
     try_geo,
+    init_comm_matrix,
+    is_doubly_stochastic,
+    fix_lambda_transformation,
 )
 from Problems.logistic_regression import LR_L2
 from graph import Weight_matrix, Geometric_graph, Exponential_graph, Grid_graph
 import math
 
+# comm_matrix = init_comm_matrix(8, "fully_connected")
+# eigenvalues, eigenvectors = np.linalg.eig(comm_matrix)
+# print("eigenvalues: ", eigenvalues)
+# print("eigenvectors: ", eigenvectors)
+# exit(0)
+
+np.random.seed(0)
+for node_num in [8, 16, 20, 24, 25]:
+    for i in range(2):
+        print("node: ", node_num, "i: ", i)
+        comm_matrix = init_comm_matrix(node_num, "erdos_renyi")
+        found, matrix = fix_lambda_transformation(comm_matrix, 0.5)
+        if found:
+            # store the matrix
+            # np.save(
+            #     f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/comm_matrix/comm_matrix_{node_num}.npy",
+            #     matrix,
+            # )
+            break
+
+exit(0)
 
 exp_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/opt_CRR_reg01"
 line_formats = [
