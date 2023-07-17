@@ -4,6 +4,8 @@ LogisticRegression/Problems/__pycache__
 NeuralNetwork/__pycache__
 NeuralNetwork/Optimizers/__pycache__
 NeuralNetwork/Problems/__pycache__
+NeuralNetwork/Problems/centralized/__pycache__
+data/
 mnist.npz
 .DS_Store
 launch.sh

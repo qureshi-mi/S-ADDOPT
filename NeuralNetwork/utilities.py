@@ -6,7 +6,7 @@
 
 def monitor(name,current,total):
     if (current+1) % (total/10) == 0:
-        print ( name + ' %d%% completed' % int(100*(current+1)/total) )
+        print ( name + ' %d%% completed' % int(100*(current+1)/total), flush=True )
 
 def nx_options():
     options = {
