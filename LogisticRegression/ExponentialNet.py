@@ -47,6 +47,7 @@ def centralized_algo(
     save_theta_path,
     stop_at_convergence,
     algo,
+    gap_type,
 ):
     exp_save_path = f"{exp_log_path}/central_{algo}"
     initDir(exp_save_path)
@@ -66,15 +67,15 @@ def centralized_algo(
     exp_names = []
     legends = []
     for idx, (epoch, bz, lr) in enumerate(params):
-        exp_names.append(f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy")
+        exp_names.append(f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_{gap_type}.npy")
         legends.append(f"{algo}: bz = {bz}, lr = {lr}")
         model_para = model_para_cp
 
         if os.path.exists(
-            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_{gap_type}.npy"
         ):
             print(
-                f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"
+                f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_{gap_type}.npy"
             )
             continue
         if train_load:
@@ -83,7 +84,7 @@ def centralized_algo(
             )
 
         if algo == "SGD":
-            theta, theta_opt, F_opt = copt.SGD(
+            theta, theta_opt, F_opt, gradients = copt.SGD(
                 logis_model,
                 lr,
                 epoch,
@@ -97,7 +98,7 @@ def centralized_algo(
                 stop_at_converge=stop_at_convergence,
             )
         elif algo == "CRR":
-            theta, theta_opt, F_opt = copt.C_RR(
+            theta, theta_opt, F_opt, gradients = copt.C_RR(
                 logis_model,
                 lr,
                 epoch,
@@ -125,6 +126,11 @@ def centralized_algo(
         np.save(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy", res_F_F
         )
+        res_F_grad = error_lr.cost_gap_path(gradients, gap_type="grad")
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad.npy",
+            res_F_grad,
+        )
 
         if save_theta_path:
             np.save(
@@ -134,7 +140,10 @@ def centralized_algo(
 
     plot_figure_path(
         exp_save_path,
-        exp_names,
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"
+            for idx, (epoch, bz, lr) in enumerate(params)
+        ],
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
@@ -150,6 +159,18 @@ def centralized_algo(
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
+        plot_every,
+        plot_first,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad.npy"
+            for idx, (epoch, bz, lr) in enumerate(params)
+        ],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_{algo}_grad_{exp_name}.pdf",
         plot_every,
         plot_first,
     )
@@ -182,6 +203,7 @@ def decentralized_algo(
     save_theta_path,
     stop_at_convergence,
     algo,
+    gap_type,
 ):
     exp_save_path = f"{exp_log_path}/{algo}"
     initDir(exp_save_path)
@@ -203,15 +225,15 @@ def decentralized_algo(
     exp_names = []
     legends = []
     for idx, (epoch, bz, lr, cr) in enumerate(params):
-        exp_names.append(f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy")
+        exp_names.append(f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_{gap_type}.npy")
         legends.append(f"{algo}: bz = {bz}, ur = {cr}, lr = {lr}")
         model_para = model_para_cp
 
         if os.path.exists(
-            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_{gap_type}.npy"
         ):
             print(
-                f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"
+                f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_{gap_type}.npy"
             )
             continue
         if train_load:
@@ -220,7 +242,7 @@ def decentralized_algo(
             )
 
         if algo == "DSGD":
-            theta_D = dopt.D_SGD(
+            theta_D, gradients = dopt.D_SGD(
                 logis_model,
                 communication_matrix,
                 lr,
@@ -238,7 +260,7 @@ def decentralized_algo(
                 comm_type=comm_type,
             )
         elif algo == "DRR":
-            theta_D = dopt.D_RR(
+            theta_D, gradients = dopt.D_RR(
                 logis_model,
                 communication_matrix,
                 lr,
@@ -268,6 +290,11 @@ def decentralized_algo(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy",
             res_F_D_F,
         )
+        res_F_D_grad = error_lr.cost_gap_path(gradients, gap_type="grad")
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad.npy",
+            res_F_D_grad,
+        )
 
         if save_theta_path:
             np.save(
@@ -277,7 +304,10 @@ def decentralized_algo(
 
     plot_figure_path(
         exp_save_path,
-        exp_names,
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"
+            for idx, (epoch, bz, lr, cr) in enumerate(params)
+        ],
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
@@ -293,6 +323,18 @@ def decentralized_algo(
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
+        plot_every,
+        plot_first,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad.npy"
+            for idx, (epoch, bz, lr, cr) in enumerate(params)
+        ],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_{algo}_grad_{exp_name}.pdf",
         plot_every,
         plot_first,
     )

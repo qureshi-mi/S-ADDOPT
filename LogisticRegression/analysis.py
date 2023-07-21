@@ -36,6 +36,13 @@ class error:
     
     def cost_gap_point(self, theta):
         return self.pr.F_val(theta) - self.F_opt
+
+    def grad_gap_path(self, iterates):
+        iterates = np.array( iterates )
+        if iterates.ndim == 2:  # if iterates is a 2D array, reshape it to 3D. simulate a network with only one node
+            iterates = iterates[:,np.newaxis,:]
+        norms = np.apply_along_axis( LA.norm, 2, iterates )**2
+        return np.sum( norms, axis = 1 ) / norms.shape[1]
     
     def cost_gap_path(self, iterates, gap_type = "F"):
         K = len(iterates)
@@ -45,6 +52,8 @@ class error:
                 result.append( error.cost_gap_point(self,iterates[k]) )
         elif gap_type == "theta":
             result = error.theta_gap_path(self, iterates)
+        elif gap_type == "grad":
+            result = error.grad_gap_path(self, iterates)
         else:
             raise ValueError("gap_type must be either F or theta")
         

@@ -35,7 +35,7 @@ def CGD(pr, learning_rate, K, theta_0):
 
     for k in range(K):
         theta.append(theta[-1] - learning_rate * pr.grad(theta[-1]))
-        ut.monitor("CGD", k, K)
+        ut.monitor("CGD", k, K, start)
 
     theta_opt = theta[-1]  # last set of parameters after training
     F_opt = pr.F_val(theta[-1])  # value of the objective function
@@ -69,6 +69,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
     """
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
+    gradients = []
 
     update_round = math.ceil(pr.N / batch_size)  # in order to line up with RR case
     print(f"update round {update_round} | pr.N {pr.N}")
@@ -83,11 +84,16 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
         # gradient updates happening in one local training round
         for i in range(update_round):
             permutation = np.random.permutation(pr.N)
-            temp = temp - learning_rate * pr.grad(
-                temp, permute=permutation[0:batch_size], permute_flag=True
+            grad = pr.grad(
+                temp,
+                permute=permutation[0:batch_size],
+                permute_flag=True,
             )
+            temp = temp - learning_rate * grad
 
         theta.append(temp)
+        gradients.append(grad)
+
         ut.monitor("SGD", k, K, track_time)
         if k % save_every == 0:
             # save_state(theta, save_path, exp_name)
@@ -110,7 +116,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, 
     print(f"Time Span: {time.time() - start}")
     theta_opt = theta[-1]
     F_opt = pr.F_val(theta[-1])
-    return theta, theta_opt, F_opt
+    return theta, theta_opt, F_opt, gradients
 
 
 def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False):
@@ -131,6 +137,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
     """
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
+    gradients = []
 
     start = time.time()
     track_time = start
@@ -142,13 +149,18 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
         permutation = np.random.permutation(pr.N)
         temp = theta[-1]
         while cnt < pr.N:
-            temp = temp - learning_rate * pr.grad(
-                temp, permute=permutation[cnt : cnt + batch_size], permute_flag=True
+            grad = pr.grad(
+                temp,
+                permute=permutation[cnt : cnt + batch_size],
+                permute_flag=True,
             )
+            temp = temp - learning_rate * grad
             cnt = cnt + batch_size
 
-        ut.monitor("C_RR", k, K, track_time)
         theta.append(temp)
+        gradients.append(grad)
+
+        ut.monitor("C_RR", k, K, track_time)
         if k % save_every == 0:
             # save_state(theta, save_path, exp_name)
             error_lr = error(pr, theta[-1], pr.F_val(theta[-1]))
@@ -170,7 +182,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, save_path, exp_name,
     print(f"Time Span: {time.time() - start}")
     theta_opt = theta[-1]
     F_opt = pr.F_val(theta[-1])
-    return theta, theta_opt, F_opt
+    return theta, theta_opt, F_opt, gradients
 
 
 ## Centralized gradient descent with momentum

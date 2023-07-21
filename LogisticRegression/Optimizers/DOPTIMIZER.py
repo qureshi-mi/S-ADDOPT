@@ -46,6 +46,7 @@ def D_SGD(
     """
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
+    gradients = []
 
     node_num = prd.n
     update_round = math.ceil(len(prd.X[0]) / batch_size)
@@ -94,6 +95,7 @@ def D_SGD(
 
         ut.monitor("D_SGD", k, K, track_time)
         theta.append(cp.deepcopy(temp))
+        gradients.append(grad)
 
         if k % save_every == 0 or k + 1 == K:
             # save_state(theta, save_path, exp_name)
@@ -110,7 +112,7 @@ def D_SGD(
     print(f"{k} Round | {update_round}# Updates | {batch_size} Batch Size")
     print(f"Time Span: {time.time() - start}")
 
-    return theta
+    return theta, gradients
 
 
 def D_RR(
@@ -147,6 +149,7 @@ def D_RR(
     """
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
+    gradients = []
 
     node_num = prd.n
     update_round = math.ceil(len(prd.X[0]) / batch_size)
@@ -198,6 +201,7 @@ def D_RR(
 
         ut.monitor("D_RR", k, K, track_time)
         theta.append(cp.deepcopy(temp))
+        gradients.append(grad)
 
         if k % save_every == 0 or k + 1 == K:
             # save_state(theta, save_path, exp_name)
@@ -212,7 +216,7 @@ def D_RR(
             )
 
     print(f"Time Span: {time.time() - start}")
-    return theta
+    return theta, gradients
 
 
 def DPG_RR():
