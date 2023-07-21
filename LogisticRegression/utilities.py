@@ -54,6 +54,8 @@ def plot_figure_path(
 
     for i, name in enumerate(exp_names):
         line = np.load(f"{exp_save_path}/{name}")
+        if plot_first == -1:
+            plot_first = len(line)
         xaxis = np.linspace(0, len(line) - 1, num=len(line), dtype=int)
         yaxis = [
             abs(point) for point in line[:plot_first:plot_every]
