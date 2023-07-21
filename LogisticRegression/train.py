@@ -34,18 +34,19 @@ from utilities import (
     # fix_lambda_transformation,
     init_comm_matrix,
 )
-from ExponentialNet import centralized_algo, decentralized_algo
+from Algos import centralized_algo, decentralized_algo
 
 np.random.seed(0)
 
 """
 Data processing for MNIST
 """
-node_num = 25  ## number of nodes
+node_num = 16  ## number of nodes
 # node_num = int(input("Enter number of nodes: "))
 
-logis_model = LR_L2(
-    node_num, limited_labels=False, balanced=True
+# LR_L2: MNIST, LR_L4: CIFAR
+logis_model = LR_L4(
+    node_num, limited_labels=False, balanced=True, nonconvex=True
 )  ## instantiate the problem class
 dim = logis_model.p  ## dimension of the model
 L = logis_model.L  ## L-smooth constant
@@ -60,25 +61,27 @@ model_para_central = np.random.normal(
 )  # initialize the model parameter for central algorithms
 model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
 
-graph = "Erdos_Renyi_graph"  # "exponential", "grid", "geometric
-comm_load_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/comm_matrix/comm_matrix_{node_num}.npy"  # f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
+graph = "grid"  # "grid", "exponential", "geometric", "erdos_renyi", "fully_connected"
+# f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
+# f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/comm_matrix/comm_matrix_{node_num}.npy"  
+comm_load_path = None
 communication_matrix = init_comm_matrix(node_num, graph, comm_load_path)
-communication_rounds = [  # TODO: one shot communication
+communication_rounds = [  # TODO: one shot communication/averaging
     1
 ]  # list of number of communication rounds for decentralized algorithms experiments
 comm_type = "graph_avg"  # "graph_avg", "all_avg", "no_comm"
 
-C_algos = []  # "SGD", "CRR"
+C_algos = ["SGD", "CRR"]  # "SGD", "CRR"
 D_algos = ["DSGD", "DRR"]  # "DSGD", "DRR"
 
-CEPOCH_base = [1000]  # number of epochs for central algorithms
-DEPOCH_base = [1000]  # number of epochs for decentralized algorithms
+CEPOCH_base = [500, 500, 500]  # number of epochs for central algorithms. should have the same length as C_batch_size
+DEPOCH_base = [500, 500, 500]  # number of epochs for decentralized algorithms
 
-C_lr = [1 / 8000]  # list of learning rate for central algorithms experiments
-D_lr = [1 / 8000]  # list of learning rate for decentralized algorithms experiments
+C_lr = [1 / 50, 1 / 250, 1 / 1000]  # list of learning rate for central algorithms experiments
+D_lr = [1 / 50, 1 / 250, 1 / 1000]  # list of learning rate for decentralized algorithms experiments
 
-C_batch_size = [10]  # list of batch size for central algorithms experiments
-D_batch_size = [10]  # list of batch size for decentralized algorithms experiments
+C_batch_size = [5, 10, 20]  # list of batch size for central algorithms experiments
+D_batch_size = [5, 10, 20]  # list of batch size for decentralized algorithms experiments
 
 C_lr_dec = False  # whether to decay the learning rate for central algorithms
 D_lr_dec = False  # whether to decay the learning rate for decentralized algorithms
@@ -93,8 +96,9 @@ D_stop_at_converge = False  # whether to stop the training when the model conver
 save_theta_path = False  # whether to save the model parameter training path for central and decentralized algorithms
 grad_track = False  # whether to track the gradient norm for decentralized algorithms
 load_init_theta = (
-    True  # whether to load the initial model parameter from pretrained model
+    False  # whether to load the initial model parameter from pretrained model
 )
+gap_type = "grad"  # "F", "theta", "grad"
 
 line_formats = [  # list of line formats for plotting
     "-vb",
@@ -110,20 +114,24 @@ line_formats = [  # list of line formats for plotting
     "-|y",
     "-_r",
 ]
-exp_name = f"mat{node_num}"
-exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/comm_matrix/{exp_name}"  # path to save the experiment results
+exp_name = f"testOpt"
+exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{exp_name}"  # path to save the experiment results
 ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
 init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
 plot_every = 50  # plot every 50 epochs
-save_every = 500  # save the model parameter every 500 epochs
-plot_first = 1000  # plot the first 1000 epochs
+save_every = 50  # save the model parameter every 500 epochs
+plot_first = -1  # plot the first 1000 epochs
 
 """
 Optimum solution
 """
 if ckp_load_path is not None:
     theta_CSGD_0, theta_opt = load_state(ckp_load_path, "optimum", "optimal")
-theta_CSGD_0 = None
+else:
+    print("No optimal solution loaded. Use random optimal solution.")
+    theta_opt = model_para_central
+    theta_CSGD_0 = None
+
 error_lr_0 = error(
     logis_model, theta_opt, logis_model.F_val(theta_opt)
 )  # instantiate the error class
@@ -163,12 +171,16 @@ print(f"D stop at converge = {D_stop_at_converge}")
 print(f"save theta path = {save_theta_path}")
 print(f"grad track = {grad_track}")
 print(f"load init theta = {load_init_theta}")
+print(f"gap type = {gap_type}")
 
 print(f"exp name = {exp_name}")
 print(f"exp log path = {exp_log_path}")
 print(f"ckp load path = {ckp_load_path}")
+print(f"init theta path = {init_theta_path}")
 print(f"plot every = {plot_every}")
 print(f"save every = {save_every}")
+print(f"plot first = {plot_first}")
+
 
 print(f"{'-'*50}", flush=True)
 start = time.time()
@@ -197,6 +209,7 @@ for algo in C_algos:
         save_theta_path,
         C_stop_at_converge,
         algo,
+        gap_type,
     )
     exp_name_all.extend(exp_names)
     legend_all.extend(legends)
@@ -226,6 +239,7 @@ for algo in D_algos:
         save_theta_path,
         D_stop_at_converge,
         algo,
+        gap_type,
     )
     exp_name_all.extend(exp_names)
     legend_all.extend(legends)

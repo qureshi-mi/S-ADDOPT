@@ -15,7 +15,7 @@ import cifar10
 # airplane = 0, automobile = 1, bird = 2, cat = 3, deer = 4, dog = 5, frog = 6, horse = 7, ship = 8, truck = 9;
 
 class LR_L4( object ):
-    def __init__(self, n_agent, class1 = 0, class2 = 1, balanced = True, limited_labels = False ):
+    def __init__(self, n_agent, class1 = 0, class2 = 1, balanced = True, limited_labels = False, nonconvex = False ):
         self.class1 = class1
         self.class2 = class2
         self.limited_labels = limited_labels
@@ -31,6 +31,10 @@ class LR_L4( object ):
         self.dim = self.p                     ## dimension of the feature 
         self.L, self.kappa = self.smooth_scvx_parameters()
         self.b = int(self.N/self.n)           ## average local samples
+
+        self.nonconvex = nonconvex
+        if self.nonconvex:
+            self.reg = 0.2
 
     def load_data(self):
 #         (trainX, trainY), (testX, testY) = cifar10.load_data()         # use this if you want have keras installed
@@ -99,8 +103,15 @@ class LR_L4( object ):
         if self.balanced == True:
             f_val = np.sum( np.log( np.exp( np.multiply(-self.Y_train,\
                                                     np.matmul(self.X_train,theta)) ) + 1 ) )/self.N
-            reg_val = (self.reg/2) * (LA.norm(theta) ** 2) 
+            if self.nonconvex:
+                theta_power = np.power(theta, 2)
+                theta_nonconvex = theta_power / (1 + theta_power)
+                reg_val = (self.reg/2) * np.sum(theta_nonconvex)
+            else:
+                reg_val = (self.reg/2) * (LA.norm(theta) ** 2) 
+
             return f_val + reg_val
+        
         if self.balanced == False:
             temp1 = np.log( np.exp( np.multiply(-self.Y_train,\
                               np.matmul(self.X_train,theta)) ) + 1 ) 
@@ -112,7 +123,25 @@ class LR_L4( object ):
             return f_val/self.n + reg_val
             
         
-    def localgrad(self, theta, idx, j = None ):  ## idx is the node index, j is local sample index
+    def localgrad(self, theta, idx, j = None, permute = None, permute_flag = False ):  ## idx is the node index, j is local sample index
+        if permute_flag:
+            assert j == None
+            temp1 = np.exp( 
+                np.matmul(
+                    self.X[idx][permute], theta[idx]) * (-self.Y[idx][permute])  
+            )
+            temp2 = ( temp1/(temp1+1) ) * (-self.Y[idx][permute])
+            grad = self.X[idx][permute] * temp2[:,np.newaxis]
+
+            if self.nonconvex:
+                denominator = np.power(theta[idx],2)
+                denominator = np.power(denominator + 1, 2)
+                grad_reg = 2*theta[idx] / denominator
+            else:
+                grad_reg = 2*theta[idx]
+
+            return np.sum(grad, axis = 0) / len(permute) + self.reg/2 * grad_reg
+        
         if j == None:                 ## local full batch gradient
             temp1 = np.exp( np.matmul(self.X[idx],theta[idx]) * (-self.Y[idx])  )
             temp2 = ( temp1/(temp1+1) ) * (-self.Y[idx])
@@ -125,8 +154,13 @@ class LR_L4( object ):
             grad = grad_lr + grad_reg
             return grad
         
-    def networkgrad(self, theta, idxv = None):  ## network stochastic/batch gradient
+    def networkgrad(self, theta, idxv = None, permute = None, permute_flag = None):  ## network stochastic/batch gradient
         grad = np.zeros( (self.n,self.p) )
+        if permute_flag:
+            for i in range(self.n):
+                grad[i] = self.localgrad(theta , i, permute = permute[i], permute_flag = True)
+            return grad
+
         if idxv is None:                        ## full batch
             for i in range(self.n):
                 grad[i] = self.localgrad(theta , i)
@@ -136,7 +170,26 @@ class LR_L4( object ):
                 grad[i] = self.localgrad(theta, i, idxv[i])
             return grad
     
-    def grad(self, theta, idx = None): ## centralized stochastic/batch gradient
+    def grad(self, theta, idx = None, permute = None, permute_flag = None): ## centralized stochastic/batch gradient
+        if permute_flag:
+            # Both SGD & RR is implemented here
+            # SGD will randomly permute all indices and pass in the first batch_size number of indices
+            # CRR will ensure that the entire permutation set has been looked through before the next permutation
+            temp1 = np.exp( 
+                np.matmul(self.X_train[permute], theta) * (-self.Y_train[permute])  
+            )
+            temp2 = ( temp1/(temp1+1) ) * (-self.Y_train[permute])
+            grad = self.X_train[permute] * temp2[:,np.newaxis]
+
+            if self.nonconvex:
+                denominator = np.power(theta,2)
+                denominator = np.power(denominator + 1, 2)
+                grad_reg = 2*theta / denominator
+            else:
+                grad_reg = 2*theta
+
+            return np.sum(grad, axis = 0) / len(permute) + self.reg/2 * grad_reg
+
         if idx == None:                ## full batch
             if self.balanced == True:
                 temp1 = np.exp( np.matmul(self.X_train,theta) * (-self.Y_train)  )
