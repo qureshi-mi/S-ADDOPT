@@ -41,11 +41,10 @@ def save_npy(npys, root_path, exp_name):
 
 
 def plot_figure_path(
-    exp_save_path, exp_names, formats, legend, save_path, plot_every, plot_first
+    exp_save_path, exp_names, formats, legend, save_path, plot_every, mark_every, plot_first
 ):
     print("plotting the figure...", flush=True)
     plt.clf()
-    mark_every = 1
     font = FontProperties()
     font.set_size(18)
     font2 = FontProperties()
@@ -581,3 +580,28 @@ def fix_lambda_transformation(comm_matrix, lambd, max_iterations=2, tolerance=1e
             return True, new_matrix
 
     return False, None
+
+def model_converged(model, theta, threshold=1e-1, gap_type="theta"):
+    """
+    This function checks if the gradients have converged
+
+    :param gradients: the gradients
+    :return: True if the gradients have converged, False otherwise
+    """
+    if len(theta) < 20:
+        return False
+    
+    tail = theta[-20:]
+    if gap_type == "theta":
+        diffs = [np.linalg.norm(tail[i] - tail[i + 1]) for i in range(len(tail) - 1)]
+        if np.mean(diffs) < threshold:
+            return True
+    elif gap_type == "F":
+        F_vals = [model.F_val(t) for t in tail]
+        diffs = [abs(F_vals[i] - F_vals[i + 1]) for i in range(len(F_vals) - 1)]
+        if np.mean(diffs) < threshold:
+            return True
+    else:
+        raise ValueError("gap_type must be theta or F")
+    
+    return False

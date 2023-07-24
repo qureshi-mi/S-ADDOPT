@@ -8,7 +8,7 @@ import utilities as ut
 from numpy import linalg as LA
 import time
 import math
-from utilities import save_npy, save_state, load_state, plot_figure_data
+from utilities import save_npy, save_state, load_state, plot_figure_data, model_converged
 from analysis import error
 
 
@@ -21,6 +21,7 @@ def D_SGD(
     batch_size,
     comm_round,
     lr_dec,
+    lr_staged,
     grad_track,
     save_path,
     exp_name,
@@ -28,6 +29,7 @@ def D_SGD(
     error_lr_0,
     stop_at_converge=False,
     comm_type="graph_avg",
+    lr_list=None,
 ):
     """
     Distributed SGD Optimizer
@@ -47,6 +49,10 @@ def D_SGD(
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
     gradients = []
+    if lr_staged:
+        lr_idx = 0
+        learning_rate = lr_list[lr_idx]
+        lr_change_round = 0
 
     node_num = prd.n
     update_round = math.ceil(len(prd.X[0]) / batch_size)
@@ -59,7 +65,17 @@ def D_SGD(
     for k in range(K):
         temp = theta[-1]
         if lr_dec:
+            assert lr_staged is False
             learning_rate = 1 / (50*k + 400)
+        
+        if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
+            assert lr_list is not None
+            assert lr_dec is False
+            if model_converged(prd, theta):
+                lr_idx += 1
+                learning_rate = lr_list[lr_idx]
+                lr_change_round = k
+                print(f"Learning Rate Decreased to {learning_rate} at {k} round")
 
         for node in range(node_num):
             for i in range(update_round):
@@ -97,7 +113,7 @@ def D_SGD(
         theta.append(cp.deepcopy(temp))
         gradients.append(grad)
 
-        if k % save_every == 0 or k + 1 == K:
+        if (k + 1) % save_every == 0 or k + 1 == K:
             # save_state(theta, save_path, exp_name)
             avg_theta = np.sum(theta[-1], axis=0) / prd.n
             error_lr = error(prd, avg_theta, prd.F_val(avg_theta))
@@ -124,6 +140,7 @@ def D_RR(
     batch_size,
     comm_round,
     lr_dec,
+    lr_staged,
     grad_track,
     save_path,
     exp_name,
@@ -131,6 +148,7 @@ def D_RR(
     error_lr_0,
     stop_at_converge=False,
     comm_type="graph_avg",
+    lr_list=None,
 ):
     """
     Distributed DRR Optimizer
@@ -150,6 +168,10 @@ def D_RR(
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
     gradients = []
+    if lr_staged:
+        lr_idx = 0
+        learning_rate = lr_list[lr_idx]
+        lr_change_round = 0
 
     node_num = prd.n
     update_round = math.ceil(len(prd.X[0]) / batch_size)
@@ -162,7 +184,17 @@ def D_RR(
     for k in range(K):
         temp = theta[-1]
         if lr_dec:
+            assert lr_staged is False
             learning_rate = 1 / (50*k + 400)
+        
+        if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
+            assert lr_list is not None
+            assert lr_dec is False
+            if model_converged(prd, theta):
+                lr_idx += 1
+                learning_rate = lr_list[lr_idx]
+                lr_change_round = k
+                print(f"Learning Rate Decreased to {learning_rate} at {k} round")
 
         for node in range(node_num):
             sample_vec = [
@@ -203,7 +235,7 @@ def D_RR(
         theta.append(cp.deepcopy(temp))
         gradients.append(grad)
 
-        if k % save_every == 0 or k + 1 == K:
+        if (k + 1) % save_every == 0 or k + 1 == K:
             # save_state(theta, save_path, exp_name)
             avg_theta = np.sum(theta[-1], axis=0) / prd.n
             error_lr = error(prd, avg_theta, prd.F_val(avg_theta))
