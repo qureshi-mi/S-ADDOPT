@@ -32,6 +32,7 @@ def centralized_algo(
     model_para,
     C_lr,
     C_lr_dec,
+    C_lr_list,
     C_batch_size,
     CEPOCH_base,
     exp_name,
@@ -40,6 +41,7 @@ def centralized_algo(
     error_lr,
     line_formats,
     plot_every,
+    mark_every,
     plot_first,
     train_load,
     load_init_theta,
@@ -59,23 +61,37 @@ def centralized_algo(
     else:
         model_para_cp = cp.deepcopy(model_para)
 
+    lr_staged = C_lr_list is not None
+    if lr_staged:
+        assert C_lr is None, "No learning rate when staged learning rate is specified"
+
     params = []
-    for idx, bz in enumerate(C_batch_size):
-        for lr in C_lr:
-            params.append((CEPOCH_base[idx], bz, lr))
+    if lr_staged:
+        for idx, bz in enumerate(C_batch_size):
+            params.append((CEPOCH_base[idx], bz, 0))
+    else:
+        for idx, bz in enumerate(C_batch_size):
+            for lr in C_lr:
+                params.append((CEPOCH_base[idx], bz, lr))
 
     exp_names = []
     legends = []
     for idx, (epoch, bz, lr) in enumerate(params):
         exp_names.append(f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_{gap_type}.npy")
-        legends.append(f"{algo}: bz = {bz}, lr = {lr}")
+        if lr_staged:
+            legends.append(f"{algo}: bz = {bz}, lr = {C_lr_list}")
+        else:
+            legends.append(f"{algo}: bz = {bz}, lr = {lr}")
         model_para = model_para_cp
+        print(f"\n{'-'*50}")
+        print(f"Running {algo} with epoch = {epoch}, batch size = {bz}, lr = {lr}")
+        print(f"{'-'*50}")
 
         if os.path.exists(
-            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_{gap_type}.npy"
+            f"{exp_save_path}/{exp_names[-1]}"
         ):
             print(
-                f"Already exists {exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_{gap_type}.npy"
+                f"Already exists {exp_save_path}/{exp_names[-1]}"
             )
             continue
         if train_load:
@@ -91,11 +107,13 @@ def centralized_algo(
                 model_para,
                 bz,
                 C_lr_dec,
+                lr_staged,
                 train_log_path,
-                f"{algo}_bz{bz}_lr{lr:.3f}_check",
+                f"{algo}_bz{bz}_lr_staged_check" if lr_staged else f"{algo}_bz{bz}_lr{lr:.3f}_check",
                 save_every,
                 error_lr,
                 stop_at_converge=stop_at_convergence,
+                lr_list=C_lr_list,
             )
         elif algo == "CRR":
             theta, theta_opt, F_opt, gradients = copt.C_RR(
@@ -105,11 +123,13 @@ def centralized_algo(
                 model_para,
                 bz,
                 C_lr_dec,
+                lr_staged,
                 train_log_path,
-                f"{algo}_bz{bz}_lr{lr}_check",
+                f"{algo}_bz{bz}_lr_staged_check" if lr_staged else f"{algo}_bz{bz}_lr{lr:.3f}_check",
                 save_every,
                 error_lr,
                 stop_at_converge=stop_at_convergence,
+                lr_list=C_lr_list,
             )
 
         np.save(
@@ -148,6 +168,7 @@ def centralized_algo(
         legends,
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
         plot_every,
+        mark_every,
         plot_first,
     )
     plot_figure_path(
@@ -160,6 +181,7 @@ def centralized_algo(
         legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
         plot_every,
+        mark_every,
         plot_first,
     )
     plot_figure_path(
@@ -172,6 +194,7 @@ def centralized_algo(
         legends,
         f"{exp_save_path}/convergence_{algo}_grad_{exp_name}.pdf",
         plot_every,
+        mark_every,
         plot_first,
     )
 
@@ -184,6 +207,7 @@ def decentralized_algo(
     model_para,
     D_lr,
     D_lr_dec,
+    D_lr_list,
     D_batch_size,
     DEPOCH_base,
     communication_matrix,
@@ -196,6 +220,7 @@ def decentralized_algo(
     error_lr,
     line_formats,
     plot_every,
+    mark_every,
     plot_first,
     train_load,
     load_init_theta,
@@ -216,18 +241,33 @@ def decentralized_algo(
     else:
         model_para_cp = cp.deepcopy(model_para)
 
+    lr_staged = D_lr_list is not None
+    if lr_staged:
+        assert D_lr is None, "No learning rate when staged learning rate is specified"
+
     params = []
-    for idx, bz in enumerate(D_batch_size):
-        for lr in D_lr:
+    if lr_staged:
+        for idx, bz in enumerate(D_batch_size):
             for cr in communication_rounds:
-                params.append((DEPOCH_base[idx], bz, lr, cr))
+                params.append((DEPOCH_base[idx], bz, 0, cr))
+    else:
+        for idx, bz in enumerate(D_batch_size):
+            for lr in D_lr:
+                for cr in communication_rounds:
+                    params.append((DEPOCH_base[idx], bz, lr, cr))
 
     exp_names = []
     legends = []
     for idx, (epoch, bz, lr, cr) in enumerate(params):
         exp_names.append(f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_{gap_type}.npy")
-        legends.append(f"{algo}: bz = {bz}, ur = {cr}, lr = {lr}")
+        if lr_staged:
+            legends.append(f"{algo}: bz = {bz}, ur = {cr}, lr = {D_lr_list}")
+        else:
+            legends.append(f"{algo}: bz = {bz}, ur = {cr}, lr = {lr}")
         model_para = model_para_cp
+        print(f"\n{'-'*50}")
+        print(f"Running {algo} with epoch = {epoch}, batch size = {bz}, lr = {lr}, ur = {cr}")
+        print(f"{'-'*50}")
 
         if os.path.exists(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_{gap_type}.npy"
@@ -251,6 +291,7 @@ def decentralized_algo(
                 bz,
                 cr,
                 D_lr_dec,
+                lr_staged,
                 grad_track,
                 train_log_path,
                 f"{algo}_bz{bz}_ur{cr}_lr{lr}",
@@ -258,6 +299,7 @@ def decentralized_algo(
                 error_lr,
                 stop_at_converge=stop_at_convergence,
                 comm_type=comm_type,
+
             )
         elif algo == "DRR":
             theta_D, gradients = dopt.D_RR(
@@ -269,6 +311,7 @@ def decentralized_algo(
                 bz,
                 cr,
                 D_lr_dec,
+                lr_staged,
                 grad_track,
                 train_log_path,
                 f"{algo}_bz{bz}_ur{cr}_lr{lr}",
@@ -312,6 +355,7 @@ def decentralized_algo(
         legends,
         f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
         plot_every,
+        mark_every,
         plot_first,
     )
     plot_figure_path(
@@ -324,6 +368,7 @@ def decentralized_algo(
         legends,
         f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
         plot_every,
+        mark_every,
         plot_first,
     )
     plot_figure_path(
@@ -336,6 +381,7 @@ def decentralized_algo(
         legends,
         f"{exp_save_path}/convergence_{algo}_grad_{exp_name}.pdf",
         plot_every,
+        mark_every,
         plot_first,
     )
 
