@@ -41,7 +41,7 @@ def save_npy(npys, root_path, exp_name):
 
 
 def plot_figure_path(
-    exp_save_path, exp_names, formats, legend, save_path, plot_every, mark_every, plot_first
+    exp_save_path, exp_names, formats, legend, save_path, plot_every, mark_every, plot_first, smooth=False
 ):
     print("plotting the figure...", flush=True)
     plt.clf()
@@ -53,6 +53,9 @@ def plot_figure_path(
 
     for i, name in enumerate(exp_names):
         line = np.load(f"{exp_save_path}/{name}")
+        if smooth:
+            line = smoother(line, window_len=10)
+
         if plot_first == -1:
             plot_first = len(line)
         xaxis = np.linspace(0, len(line) - 1, num=len(line), dtype=int)
@@ -605,3 +608,40 @@ def model_converged(model, theta, threshold=1e-1, gap_type="theta"):
         raise ValueError("gap_type must be theta or F")
     
     return False
+
+def smoother(x, window_len=11, window="flat"):
+    """
+    moving average smoothing
+    """
+    
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+    
+    if x.size < window_len:
+        raise ValueError("Input vector needs to be bigger than window size.")
+    
+    if window_len < 3:
+        return x
+    
+    if window not in ["flat"]:
+        raise ValueError(
+            "Window is on of 'flat'"
+        )
+    
+    w = np.ones(window_len, "d")
+    y = np.convolve(w / w.sum(), x, mode="same")
+    # TODO: what if distributed algorithms?
+    
+    return y
+
+def gen_gap_names(exp_name_all, gap_type="theta"):
+    """
+    This function generates the names of the gap files
+    """
+    exp_names = []
+    for exp_name in exp_name_all:
+        items = exp_name.split("_")
+        items[-1] = f"{gap_type}.npy"
+        exp_names.append("_".join(items))
+    
+    return exp_names
