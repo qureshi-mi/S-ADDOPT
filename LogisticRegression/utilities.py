@@ -628,8 +628,8 @@ def smoother(x, window_len=11, window="flat"):
             "Window is on of 'flat'"
         )
     
-    w = np.ones(window_len, "d")
-    y = np.convolve(w / w.sum(), x, mode="same")
+    w = np.ones(window_len, "d") / window_len
+    y = np.convolve(w, x, mode="valid")
     # TODO: what if distributed algorithms?
     
     return y
