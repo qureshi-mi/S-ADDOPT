@@ -38,10 +38,14 @@ class error:
         return self.pr.F_val(theta) - self.F_opt
 
     def grad_gap_path(self, iterates):
-        iterates = np.array( iterates )
-        if iterates.ndim == 2:  # if iterates is a 2D array, reshape it to 3D. simulate a network with only one node
-            iterates = iterates[:,np.newaxis,:]
-        norms = np.apply_along_axis( LA.norm, 2, iterates )**2
+        grads = []
+        for k in range(len(iterates)):
+            grads.append( self.pr.F_grad(iterates[k]) )
+        grads = np.array(grads)
+
+        if grads.ndim == 2:  # if grads is a 2D array, reshape it to 3D. simulate a network with only one node
+            grads = grads[:,np.newaxis,:]
+        norms = np.apply_along_axis( LA.norm, 2, grads )**2
         return np.sum( norms, axis = 1 ) / norms.shape[1]
     
     def cost_gap_path(self, iterates, gap_type = "F"):

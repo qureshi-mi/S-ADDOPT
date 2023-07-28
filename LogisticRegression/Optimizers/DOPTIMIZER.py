@@ -30,6 +30,7 @@ def D_SGD(
     stop_at_converge=False,
     comm_type="graph_avg",
     lr_list=None,
+    lr_dec_epochs=None,
 ):
     """
     Distributed SGD Optimizer
@@ -48,7 +49,6 @@ def D_SGD(
     """
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
-    gradients = []
     if lr_staged:
         lr_idx = 0
         learning_rate = lr_list[lr_idx]
@@ -68,14 +68,22 @@ def D_SGD(
             assert lr_staged is False
             learning_rate = 1 / (50*k + 400)
         
-        if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
-            assert lr_list is not None
-            assert lr_dec is False
-            if model_converged(prd, theta):
-                lr_idx += 1
+        if lr_dec_epochs is None:
+            if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
+                assert lr_list is not None
+                assert lr_dec is False
+                if model_converged(prd, theta):
+                    lr_idx += 1
+                    learning_rate = lr_list[lr_idx]
+                    lr_change_round = k
+                    print(f"Learning Rate Decreased to {learning_rate} at {k} round")
+        else:
+            if k in lr_dec_epochs:
+                assert lr_list is not None
+                assert lr_dec is False
+                lr_idx = lr_dec_epochs.index(k) + 1
                 learning_rate = lr_list[lr_idx]
-                lr_change_round = k
-                print(f"Learning Rate Decreased to {learning_rate} at {k} round")
+                print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
 
         for node in range(node_num):
             for i in range(update_round):
@@ -111,7 +119,6 @@ def D_SGD(
 
         ut.monitor("D_SGD", k, K, track_time)
         theta.append(cp.deepcopy(temp))
-        gradients.append(grad)
 
         if (k + 1) % save_every == 0 or k + 1 == K:
             # save_state(theta, save_path, exp_name)
@@ -128,7 +135,7 @@ def D_SGD(
     print(f"{k} Round | {update_round}# Updates | {batch_size} Batch Size")
     print(f"Time Span: {time.time() - start}")
 
-    return theta, gradients
+    return theta
 
 
 def D_RR(
@@ -149,6 +156,7 @@ def D_RR(
     stop_at_converge=False,
     comm_type="graph_avg",
     lr_list=None,
+    lr_dec_epochs=None,
 ):
     """
     Distributed DRR Optimizer
@@ -167,7 +175,6 @@ def D_RR(
     """
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
-    gradients = []
     if lr_staged:
         lr_idx = 0
         learning_rate = lr_list[lr_idx]
@@ -187,14 +194,22 @@ def D_RR(
             assert lr_staged is False
             learning_rate = 1 / (50*k + 400)
         
-        if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
-            assert lr_list is not None
-            assert lr_dec is False
-            if model_converged(prd, theta):
-                lr_idx += 1
+        if lr_dec_epochs is None:
+            if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
+                assert lr_list is not None
+                assert lr_dec is False
+                if model_converged(prd, theta):
+                    lr_idx += 1
+                    learning_rate = lr_list[lr_idx]
+                    lr_change_round = k
+                    print(f"Learning Rate Decreased to {learning_rate} at {k} round")
+        else:
+            if k in lr_dec_epochs:
+                assert lr_list is not None
+                assert lr_dec is False
+                lr_idx = lr_dec_epochs.index(k) + 1
                 learning_rate = lr_list[lr_idx]
-                lr_change_round = k
-                print(f"Learning Rate Decreased to {learning_rate} at {k} round")
+                print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
 
         for node in range(node_num):
             sample_vec = [
@@ -233,7 +248,6 @@ def D_RR(
 
         ut.monitor("D_RR", k, K, track_time)
         theta.append(cp.deepcopy(temp))
-        gradients.append(grad)
 
         if (k + 1) % save_every == 0 or k + 1 == K:
             # save_state(theta, save_path, exp_name)
@@ -248,7 +262,7 @@ def D_RR(
             )
 
     print(f"Time Span: {time.time() - start}")
-    return theta, gradients
+    return theta
 
 
 def DPG_RR():

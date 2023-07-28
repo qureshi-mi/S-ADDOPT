@@ -13,11 +13,26 @@ import cifar10
 
 # Labels of different classes to select from:
 # airplane = 0, automobile = 1, bird = 2, cat = 3, deer = 4, dog = 5, frog = 6, horse = 7, ship = 8, truck = 9;
+cifar10_classes = {
+    0: "airplane",
+    1: "automobile",
+    2: "bird",
+    3: "cat",
+    4: "deer",
+    5: "dog",
+    6: "frog",
+    7: "horse",
+    8: "ship",
+    9: "truck",
+}
 
 class LR_L4( object ):
     def __init__(self, n_agent, class1 = 0, class2 = 1, balanced = True, limited_labels = False, nonconvex = False ):
         self.class1 = class1
         self.class2 = class2
+        print( 'class1: ', cifar10_classes[class1] )
+        print( 'class2: ', cifar10_classes[class2] )
+
         self.limited_labels = limited_labels
         self.n = n_agent 
         self.balanced = balanced
@@ -33,8 +48,8 @@ class LR_L4( object ):
         self.b = int(self.N/self.n)           ## average local samples
 
         self.nonconvex = nonconvex
-        if self.nonconvex:
-            self.reg = 0.2
+        self.reg = 0.2
+        print( 'reg', self.reg )
 
     def load_data(self):
 #         (trainX, trainY), (testX, testY) = cifar10.load_data()         # use this if you want have keras installed
@@ -121,6 +136,19 @@ class LR_L4( object ):
                 f_val += np.sum(temp2[i])/self.data_distr[i]
             reg_val = (self.reg/2) * (LA.norm(theta) ** 2) 
             return f_val/self.n + reg_val
+
+    def F_grad(self, theta):          ##  gradient of the objective function at theta
+        if self.balanced == True:
+            temp1 = np.exp( np.matmul(self.X_train,theta) * (-self.Y_train)  )
+            temp2 = ( temp1/(temp1+1) ) * (-self.Y_train)
+            grad = self.X_train * temp2[:,np.newaxis]
+            if self.nonconvex:
+                denominator = np.power(theta,2)
+                denominator = np.power(denominator + 1, 2)
+                grad_reg = 2*theta / denominator
+            else:
+                grad_reg = 2*theta
+            return np.sum(grad, axis = 0)/self.N + self.reg/2 * grad_reg
             
         
     def localgrad(self, theta, idx, j = None, permute = None, permute_flag = False ):  ## idx is the node index, j is local sample index

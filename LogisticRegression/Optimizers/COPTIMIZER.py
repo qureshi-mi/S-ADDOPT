@@ -44,7 +44,7 @@ def CGD(pr, learning_rate, K, theta_0):
     return theta, theta_opt, F_opt
 
 
-def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False, lr_list=None):
+def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False, lr_list=None, lr_dec_epochs=None):
     """
     Centralized mini-batch SGD Optimizer. This optimizer trains on all
     data globally in a batched manner.
@@ -69,7 +69,6 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path,
     """
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
-    gradients = []
     if lr_staged:
         lr_idx = 0
         learning_rate = lr_list[lr_idx]
@@ -85,14 +84,22 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path,
             assert lr_staged is False
             learning_rate = 1 / (50*k + 400)
         
-        if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
-            assert lr_list is not None
-            assert lr_dec is False
-            if model_converged(pr, theta):
-                lr_idx += 1
+        if lr_dec_epochs is None:
+            if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
+                assert lr_list is not None
+                assert lr_dec is False
+                if model_converged(pr, theta):
+                    lr_idx += 1
+                    learning_rate = lr_list[lr_idx]
+                    lr_change_round = k
+                    print(f"Learning Rate Decreased to {learning_rate} at {k} round")
+        else:
+            if k in lr_dec_epochs:
+                assert lr_list is not None
+                assert lr_dec is False
+                lr_idx = lr_dec_epochs.index(k) + 1
                 learning_rate = lr_list[lr_idx]
-                lr_change_round = k
-                print(f"Learning Rate Decreased to {learning_rate} at {k} round")
+                print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
 
         temp = theta[-1]
         # gradient updates happening in one local training round
@@ -106,7 +113,6 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path,
             temp = temp - learning_rate * grad
 
         theta.append(temp)
-        gradients.append(grad)
 
         ut.monitor("SGD", k, K, track_time)
         if (k + 1) % save_every == 0:
@@ -130,10 +136,10 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path,
     print(f"Time Span: {time.time() - start}")
     theta_opt = theta[-1]
     F_opt = pr.F_val(theta[-1])
-    return theta, theta_opt, F_opt, gradients
+    return theta, theta_opt, F_opt
 
 
-def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False, lr_list=None):
+def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False, lr_list=None, lr_dec_epochs=None):
     """
     Centralized Random Reshuflling Optimizer.
 
@@ -151,7 +157,6 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path
     """
     theta_copy = cp.deepcopy(theta_0)
     theta = [theta_copy]
-    gradients = []
     if lr_staged:
         lr_idx = 0
         learning_rate = lr_list[lr_idx]
@@ -164,14 +169,22 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path
             assert lr_staged is False
             learning_rate = 1 / (50*k + 400)
 
-        if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
-            assert lr_list is not None
-            assert lr_dec is False
-            if model_converged(pr, theta):
-                lr_idx += 1
+        if lr_dec_epochs is None:
+            if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
+                assert lr_list is not None
+                assert lr_dec is False
+                if model_converged(pr, theta):
+                    lr_idx += 1
+                    learning_rate = lr_list[lr_idx]
+                    lr_change_round = k
+                    print(f"Learning Rate Decreased to {learning_rate} at {k} round")
+        else:
+            if k in lr_dec_epochs:
+                assert lr_list is not None
+                assert lr_dec is False
+                lr_idx = lr_dec_epochs.index(k) + 1
                 learning_rate = lr_list[lr_idx]
-                lr_change_round = k
-                print(f"Learning Rate Decreased to {learning_rate} at {k} round")
+                print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
             
         cnt = 0
         permutation = np.random.permutation(pr.N)
@@ -186,7 +199,6 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path
             cnt = cnt + batch_size
 
         theta.append(temp)
-        gradients.append(grad)
 
         ut.monitor("C_RR", k, K, track_time)
         if (k + 1) % save_every == 0:
@@ -210,7 +222,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path
     print(f"Time Span: {time.time() - start}")
     theta_opt = theta[-1]
     F_opt = pr.F_val(theta[-1])
-    return theta, theta_opt, F_opt, gradients
+    return theta, theta_opt, F_opt
 
 
 ## Centralized gradient descent with momentum

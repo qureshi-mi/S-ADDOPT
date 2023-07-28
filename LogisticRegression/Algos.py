@@ -33,6 +33,7 @@ def centralized_algo(
     C_lr,
     C_lr_dec,
     C_lr_list,
+    C_lr_dec_epochs,
     C_batch_size,
     CEPOCH_base,
     exp_name,
@@ -50,6 +51,7 @@ def centralized_algo(
     stop_at_convergence,
     algo,
     gap_type,
+    use_smoother,
 ):
     exp_save_path = f"{exp_log_path}/central_{algo}"
     initDir(exp_save_path)
@@ -71,7 +73,7 @@ def centralized_algo(
             params.append((CEPOCH_base[idx], bz, 0))
     else:
         for idx, bz in enumerate(C_batch_size):
-            for lr in C_lr:
+            for idx_lr, lr in enumerate(C_lr):
                 params.append((CEPOCH_base[idx], bz, lr))
 
     exp_names = []
@@ -100,7 +102,7 @@ def centralized_algo(
             )
 
         if algo == "SGD":
-            theta, theta_opt, F_opt, gradients = copt.SGD(
+            theta, theta_opt, F_opt = copt.SGD(
                 logis_model,
                 lr,
                 epoch,
@@ -114,9 +116,10 @@ def centralized_algo(
                 error_lr,
                 stop_at_converge=stop_at_convergence,
                 lr_list=C_lr_list,
+                lr_dec_epochs=C_lr_dec_epochs,
             )
         elif algo == "CRR":
-            theta, theta_opt, F_opt, gradients = copt.C_RR(
+            theta, theta_opt, F_opt = copt.C_RR(
                 logis_model,
                 lr,
                 epoch,
@@ -130,6 +133,7 @@ def centralized_algo(
                 error_lr,
                 stop_at_converge=stop_at_convergence,
                 lr_list=C_lr_list,
+                lr_dec_epochs=C_lr_dec_epochs,
             )
 
         np.save(
@@ -146,7 +150,7 @@ def centralized_algo(
         np.save(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy", res_F_F
         )
-        res_F_grad = error_lr.cost_gap_path(gradients, gap_type="grad")
+        res_F_grad = error_lr.cost_gap_path(theta, gap_type="grad")
         np.save(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad.npy",
             res_F_grad,
@@ -170,6 +174,7 @@ def centralized_algo(
         plot_every,
         mark_every,
         plot_first,
+        use_smoother,
     )
     plot_figure_path(
         exp_save_path,
@@ -183,6 +188,7 @@ def centralized_algo(
         plot_every,
         mark_every,
         plot_first,
+        use_smoother,
     )
     plot_figure_path(
         exp_save_path,
@@ -196,6 +202,7 @@ def centralized_algo(
         plot_every,
         mark_every,
         plot_first,
+        use_smoother,
     )
 
     exp_names = [f"central_{algo}/{name}" for name in exp_names]
@@ -208,6 +215,7 @@ def decentralized_algo(
     D_lr,
     D_lr_dec,
     D_lr_list,
+    D_lr_dec_epochs,
     D_batch_size,
     DEPOCH_base,
     communication_matrix,
@@ -229,6 +237,7 @@ def decentralized_algo(
     stop_at_convergence,
     algo,
     gap_type,
+    use_smoother,
 ):
     exp_save_path = f"{exp_log_path}/{algo}"
     initDir(exp_save_path)
@@ -282,7 +291,7 @@ def decentralized_algo(
             )
 
         if algo == "DSGD":
-            theta_D, gradients = dopt.D_SGD(
+            theta_D = dopt.D_SGD(
                 logis_model,
                 communication_matrix,
                 lr,
@@ -299,10 +308,11 @@ def decentralized_algo(
                 error_lr,
                 stop_at_converge=stop_at_convergence,
                 comm_type=comm_type,
-
+                lr_list=D_lr_list,
+                lr_dec_epochs=D_lr_dec_epochs,
             )
         elif algo == "DRR":
-            theta_D, gradients = dopt.D_RR(
+            theta_D = dopt.D_RR(
                 logis_model,
                 communication_matrix,
                 lr,
@@ -319,6 +329,8 @@ def decentralized_algo(
                 error_lr,
                 stop_at_converge=stop_at_convergence,
                 comm_type=comm_type,
+                lr_list=D_lr_list,
+                lr_dec_epochs=D_lr_dec_epochs,
             )
 
         res_F_D = error_lr.cost_gap_path(theta_D, gap_type="theta")
@@ -333,7 +345,7 @@ def decentralized_algo(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy",
             res_F_D_F,
         )
-        res_F_D_grad = error_lr.cost_gap_path(gradients, gap_type="grad")
+        res_F_D_grad = error_lr.cost_gap_path(theta_D, gap_type="grad")
         np.save(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad.npy",
             res_F_D_grad,
@@ -357,6 +369,7 @@ def decentralized_algo(
         plot_every,
         mark_every,
         plot_first,
+        use_smoother,
     )
     plot_figure_path(
         exp_save_path,
@@ -370,6 +383,7 @@ def decentralized_algo(
         plot_every,
         mark_every,
         plot_first,
+        use_smoother,
     )
     plot_figure_path(
         exp_save_path,
@@ -383,6 +397,7 @@ def decentralized_algo(
         plot_every,
         mark_every,
         plot_first,
+        use_smoother,
     )
 
     exp_names = [f"{algo}/{name}" for name in exp_names]
