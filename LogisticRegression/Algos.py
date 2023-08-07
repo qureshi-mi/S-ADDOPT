@@ -345,7 +345,9 @@ def decentralized_algo(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy",
             res_F_D_F,
         )
-        res_F_D_grad = error_lr.cost_gap_path(theta_D, gap_type="grad")
+        res_F_D_grad = error_lr.cost_gap_path(
+            np.sum(theta_D, axis=1) / logis_model.n, gap_type="grad"
+        )
         np.save(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad.npy",
             res_F_D_grad,
