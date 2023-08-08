@@ -7,7 +7,13 @@ import copy as cp
 import utilities as ut
 import time
 import math
-from utilities import save_npy, save_state, load_state, plot_figure_data, model_converged
+from utilities import (
+    save_npy,
+    save_state,
+    load_state,
+    plot_figure_data,
+    model_converged,
+)
 from analysis import error
 
 
@@ -44,7 +50,22 @@ def CGD(pr, learning_rate, K, theta_0):
     return theta, theta_opt, F_opt
 
 
-def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False, lr_list=None, lr_dec_epochs=None):
+def SGD(
+    pr,
+    learning_rate,
+    K,
+    theta_0,
+    batch_size,
+    lr_dec,
+    lr_staged,
+    save_path,
+    exp_name,
+    save_every,
+    error_lr_0,
+    stop_at_converge=False,
+    lr_list=None,
+    lr_dec_epochs=None,
+):
     """
     Centralized mini-batch SGD Optimizer. This optimizer trains on all
     data globally in a batched manner.
@@ -82,8 +103,8 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path,
     for k in range(K):  # k local training rounds
         if lr_dec:
             assert lr_staged is False
-            learning_rate = 1 / (50*k + 400)
-        
+            learning_rate = 1 / (50 * k + 400)
+
         if lr_dec_epochs is None:
             if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
                 assert lr_list is not None
@@ -99,7 +120,9 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path,
                 assert lr_dec is False
                 lr_idx = lr_dec_epochs.index(k) + 1
                 learning_rate = lr_list[lr_idx]
-                print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
+                print(
+                    f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease"
+                )
 
         temp = theta[-1]
         # gradient updates happening in one local training round
@@ -125,7 +148,7 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path,
                 f"{save_path}/{exp_name}{k}.pdf",
                 100,
             )
-        
+
         if stop_at_converge:
             cost_path = error_lr_0.cost_gap_path(theta, gap_type="theta")
             if cost_path[-1] < 1e-1:
@@ -139,7 +162,22 @@ def SGD(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path,
     return theta, theta_opt, F_opt
 
 
-def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path, exp_name, save_every, error_lr_0, stop_at_converge=False, lr_list=None, lr_dec_epochs=None):
+def C_RR(
+    pr,
+    learning_rate,
+    K,
+    theta_0,
+    batch_size,
+    lr_dec,
+    lr_staged,
+    save_path,
+    exp_name,
+    save_every,
+    error_lr_0,
+    stop_at_converge=False,
+    lr_list=None,
+    lr_dec_epochs=None,
+):
     """
     Centralized Random Reshuflling Optimizer.
 
@@ -167,7 +205,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path
     for k in range(K):
         if lr_dec:
             assert lr_staged is False
-            learning_rate = 1 / (50*k + 400)
+            learning_rate = 1 / (50 * k + 400)
 
         if lr_dec_epochs is None:
             if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
@@ -184,8 +222,10 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path
                 assert lr_dec is False
                 lr_idx = lr_dec_epochs.index(k) + 1
                 learning_rate = lr_list[lr_idx]
-                print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
-            
+                print(
+                    f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease"
+                )
+
         cnt = 0
         permutation = np.random.permutation(pr.N)
         temp = theta[-1]
@@ -217,7 +257,7 @@ def C_RR(pr, learning_rate, K, theta_0, batch_size, lr_dec, lr_staged, save_path
             if cost_path[-1] < 1e-1:
                 print(f"Stop at Convergence: Converged at {k} round")
                 return theta, theta[-1], pr.F_val(theta[-1])
-            
+
     print(f"{k} Round | {cnt / batch_size}# Updates | {batch_size} Batch Size")
     print(f"Time Span: {time.time() - start}")
     theta_opt = theta[-1]
