@@ -65,6 +65,7 @@ def SGD(
     stop_at_converge=False,
     lr_list=None,
     lr_dec_epochs=None,
+    node_num=None,
 ):
     """
     Centralized mini-batch SGD Optimizer. This optimizer trains on all
@@ -126,14 +127,15 @@ def SGD(
 
         temp = theta[-1]
         # gradient updates happening in one local training round
-        for i in range(update_round):
-            permutation = np.random.permutation(pr.N)
-            grad = pr.grad(
-                temp,
-                permute=permutation[0:batch_size],
-                permute_flag=True,
-            )
-            temp = temp - learning_rate * grad
+        for it in range(node_num):
+            for i in range(update_round):
+                permutation = np.random.permutation(pr.N)
+                grad = pr.grad(
+                    temp,
+                    permute=permutation[0:batch_size],
+                    permute_flag=True,
+                )
+                temp = temp - learning_rate * grad
 
         theta.append(temp)
 
@@ -177,6 +179,7 @@ def C_RR(
     stop_at_converge=False,
     lr_list=None,
     lr_dec_epochs=None,
+    node_num=None,
 ):
     """
     Centralized Random Reshuflling Optimizer.
@@ -226,17 +229,18 @@ def C_RR(
                     f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease"
                 )
 
-        cnt = 0
-        permutation = np.random.permutation(pr.N)
         temp = theta[-1]
-        while cnt < pr.N:
-            grad = pr.grad(
-                temp,
-                permute=permutation[cnt : cnt + batch_size],
-                permute_flag=True,
-            )
-            temp = temp - learning_rate * grad
-            cnt = cnt + batch_size
+        for it in range(node_num):
+            cnt = 0
+            permutation = np.random.permutation(pr.N)
+            while cnt < pr.N:
+                grad = pr.grad(
+                    temp,
+                    permute=permutation[cnt : cnt + batch_size],
+                    permute_flag=True,
+                )
+                temp = temp - learning_rate * grad
+                cnt = cnt + batch_size
 
         theta.append(temp)
 

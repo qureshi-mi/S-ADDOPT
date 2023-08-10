@@ -108,8 +108,11 @@ def D_SGD(
                     elif comm_type == "all_avg":
                         theta_avg = np.sum(temp, axis=0) / node_num
                         temp = np.array([theta_avg for i in range(node_num)])
+                        raise NotImplementedError
                     elif comm_type == "no_comm":
                         pass
+                    else:
+                        raise NotImplementedError
 
                 if stop_at_converge:
                     cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
@@ -237,8 +240,11 @@ def D_RR(
                     elif comm_type == "all_avg":
                         theta_avg = np.sum(temp, axis=0) / node_num
                         temp = np.array([theta_avg for i in range(node_num)])
+                        raise NotImplementedError
                     elif comm_type == "no_comm":
                         pass
+                    else:
+                        raise NotImplementedError
 
                 if stop_at_converge:
                     cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
