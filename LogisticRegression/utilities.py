@@ -52,9 +52,10 @@ def plot_figure_path(
     plt.figure(3)
 
     for i, name in enumerate(exp_names):
+        print(f"plotting {exp_save_path}/{name}...", flush=True)
         line = np.load(f"{exp_save_path}/{name}")
         if smooth:
-            line = smoother(line, window_len=10)
+            line = smoother(line, window_len=5)
 
         if plot_first == -1:
             plot_first = len(line)
@@ -490,6 +491,8 @@ def init_comm_matrix(node_num, graph, load_path=None):
             undir_graph = Fully_connected_graph(node_num).undirected()
         elif graph == "erdos_renyi":
             undir_graph = Erdos_Renyi_graph(node_num, 0.1).undirected()
+        else:
+            raise ValueError("graph must be exponential, grid, geometric, fully_connected, or erdos_renyi")
 
         if graph in ["exponential", "grid", "geometric", "fully_connected"]:
             communication_matrix = Weight_matrix(undir_graph).row_stochastic()
@@ -645,3 +648,93 @@ def gen_gap_names(exp_name_all, gap_type="theta"):
         exp_names.append("_".join(items))
     
     return exp_names
+
+def avg_gap(info_log_path, trial_num):
+    """
+    This function calculates the average gap
+    """
+    # pickle file
+    import pickle
+    with open(f"{info_log_path}/info_log.pkl", "rb") as f:
+        pickle_file = pickle.load(f)
+    
+    gap_types = ["F", "theta", "grad"]
+
+    for type_idx, gap_type in enumerate(gap_types):
+        for exp in pickle_file[f"trial1"][type_idx]:    # exp is the name of the experiment. Different trails have the same exp name
+            print(f"processing {exp}...", flush=True)
+            gaps = []
+            for trial in range(trial_num):
+                gaps.append(np.load(f"{info_log_path}/trial{trial+1}/{exp}"))
+            # average over all trials
+            avg_gap = np.mean(gaps, axis=0)
+            exp_name = exp.split("/")[-1]
+            np.save(f"{info_log_path}/avg_{exp_name}", avg_gap)
+
+def plot_avg(avg_path, gap_type="theta", lr_list=[1/50, 1/250, 1/1000]):
+    # list files with .npy
+    import glob
+    import re
+    import matplotlib.pyplot as plt
+    from matplotlib.font_manager import FontProperties
+    
+    font = FontProperties()
+    font.set_size(18)
+    font2 = FontProperties()
+    font2.set_size(10)
+    plt.figure(3)
+
+    files = glob.glob(f"{avg_path}/*.npy")
+    files.sort(key=lambda f: int(re.sub("\D", "", f)))
+    gap_files = [file for file in files if gap_type in file]
+    files = gap_files
+
+    legends = []
+    for i, file in enumerate(files):
+        print(f"plotting {file}...", flush=True)
+        # get legend
+        exp_name = file.split("/")[-1]
+        items = exp_name.split("_")
+        algo = items[1]
+        bz = items[4][2:]
+        lr = items[5][2:]
+        if lr == "0.000000":
+            lr = lr_list
+        if len(items) == 8:
+            cr = items[6][2:]
+            legends.append(f"{algo} (bz={bz}, lr={lr}, cr={cr})")
+        else:
+            legends.append(f"{algo} (bz={bz}, lr={lr})")
+        print(f"legend: {legends[-1]}")
+
+    plot_figure_path(
+        avg_path,
+        [file.split("/")[-1] for file in files],
+        [
+            "-vb",
+            "-^m",
+            "-dy",
+            "-sr",
+            "-1k",
+            "-2g",
+            "-3r",
+            "-.kp",
+            "-+c",
+            "-xm",
+            "-|y",
+            "-_r",
+        ],
+        legends,
+        f"{avg_path}/avg_{gap_type}.pdf",
+        1,
+        10,
+        -1,
+        smooth=False,
+    )
+
+
+
+if __name__ == "__main__":
+    # avg_gap("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp5_bz10_trialNum10", 10)
+    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp3_bz20_trialNum10", "grad")
+    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp3_bz20_trialNum10", "theta")
