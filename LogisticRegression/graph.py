@@ -119,6 +119,18 @@ class Exponential_graph:
             for j in neighbors:
                 D[i][j] = 1
         return D
+    
+class Ring_graph:
+    def __init__(self, number_of_nodes):
+        self.size = number_of_nodes
+
+    def undirected(self):
+        U = np.zeros((self.size, self.size))
+        for i in range(self.size):
+            U[i][i] = 1
+            U[i][(i+1)%self.size] = 1
+            U[(i+1)%self.size][i] = 1
+        return U
 
 
 class Fully_connected_graph:

@@ -487,6 +487,8 @@ def init_comm_matrix(node_num, graph, load_path=None):
             undir_graph = Grid_graph(int(math.sqrt(node_num))).undirected()
         elif graph == "geometric":
             undir_graph = Geometric_graph(node_num).undirected(0.8)
+        elif graph == "ring":
+            undir_graph = Ring_graph(node_num).undirected()
         elif graph == "fully_connected":
             undir_graph = Fully_connected_graph(node_num).undirected()
         elif graph == "erdos_renyi":
@@ -494,7 +496,7 @@ def init_comm_matrix(node_num, graph, load_path=None):
         else:
             raise ValueError("graph must be exponential, grid, geometric, fully_connected, or erdos_renyi")
 
-        if graph in ["exponential", "grid", "geometric", "fully_connected"]:
+        if graph in ["exponential", "grid", "geometric", "ring", "fully_connected"]:
             communication_matrix = Weight_matrix(undir_graph).row_stochastic()
             communication_matrix = convert_to_doubly_stochastic(
                 communication_matrix, int(1e4), 1e-7
@@ -658,7 +660,7 @@ def avg_gap(info_log_path, trial_num):
     with open(f"{info_log_path}/info_log.pkl", "rb") as f:
         pickle_file = pickle.load(f)
     
-    gap_types = ["F", "theta", "grad"]
+    gap_types = ["F", "theta", "grad1", "grad2"]
 
     for type_idx, gap_type in enumerate(gap_types):
         for exp in pickle_file[f"trial1"][type_idx]:    # exp is the name of the experiment. Different trails have the same exp name
@@ -732,9 +734,15 @@ def plot_avg(avg_path, gap_type="theta", lr_list=[1/50, 1/250, 1/1000]):
         smooth=False,
     )
 
+    # remove the avg files
+    for file in files:
+        os.remove(file)
+        print(f"removed {file}")
+
 
 
 if __name__ == "__main__":
-    # avg_gap("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp5_bz10_trialNum10", 10)
-    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp3_bz20_trialNum10", "grad")
-    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp3_bz20_trialNum10", "theta")
+    avg_gap("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring", 5)
+    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring", "grad1")
+    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring", "grad2")
+    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring", "theta")
