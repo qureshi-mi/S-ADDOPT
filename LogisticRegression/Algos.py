@@ -162,6 +162,11 @@ def centralized_algo(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad2.npy",
             res_F_grad,
         )
+        res_F_concensus = error_lr.cost_gap_path(theta, gap_type="consensus")
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_consensus.npy",
+            res_F_concensus,
+        )
 
         if save_theta_path:
             np.save(
@@ -206,6 +211,20 @@ def centralized_algo(
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf",
+        plot_every,
+        mark_every,
+        plot_first,
+        use_smoother,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_consensus.npy"
+            for idx, (epoch, bz, lr) in enumerate(params)
+        ],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_{algo}_consensus_{exp_name}.pdf",
         plot_every,
         mark_every,
         plot_first,
@@ -366,6 +385,13 @@ def decentralized_algo(
             f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad2.npy",
             res_F_D_grad,
         )
+        res_F_D_concensus = error_lr.cost_gap_path(
+            theta_D, gap_type="consensus"
+        )
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_consensus.npy",
+            res_F_D_concensus,
+        )
 
         if save_theta_path:
             np.save(
@@ -424,6 +450,20 @@ def decentralized_algo(
         line_formats,
         legends,
         f"{exp_save_path}/convergence_{algo}_grad2_{exp_name}.pdf",
+        plot_every,
+        mark_every,
+        plot_first,
+        use_smoother,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_consensus.npy"
+            for idx, (epoch, bz, lr, cr) in enumerate(params)
+        ],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_{algo}_consensus_{exp_name}.pdf",
         plot_every,
         mark_every,
         plot_first,
