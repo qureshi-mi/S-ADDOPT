@@ -30,6 +30,7 @@ from utilities import (
 def centralized_algo(
     logis_model,
     model_para,
+    node_num,
     C_lr,
     C_lr_dec,
     C_lr_list,
@@ -117,6 +118,7 @@ def centralized_algo(
                 stop_at_converge=stop_at_convergence,
                 lr_list=C_lr_list,
                 lr_dec_epochs=C_lr_dec_epochs,
+                node_num=node_num,
             )
         elif algo == "CRR":
             theta, theta_opt, F_opt = copt.C_RR(
@@ -134,6 +136,7 @@ def centralized_algo(
                 stop_at_converge=stop_at_convergence,
                 lr_list=C_lr_list,
                 lr_dec_epochs=C_lr_dec_epochs,
+                node_num=node_num,
             )
 
         np.save(
@@ -152,7 +155,11 @@ def centralized_algo(
         )
         res_F_grad = error_lr.cost_gap_path(theta, gap_type="grad")
         np.save(
-            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad.npy",
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad1.npy",
+            res_F_grad,
+        )
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad2.npy",
             res_F_grad,
         )
 
@@ -193,12 +200,12 @@ def centralized_algo(
     plot_figure_path(
         exp_save_path,
         [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad.npy"
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad1.npy"
             for idx, (epoch, bz, lr) in enumerate(params)
         ],
         line_formats,
         legends,
-        f"{exp_save_path}/convergence_{algo}_grad_{exp_name}.pdf",
+        f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf",
         plot_every,
         mark_every,
         plot_first,
@@ -349,7 +356,14 @@ def decentralized_algo(
             np.sum(theta_D, axis=1) / logis_model.n, gap_type="grad"
         )
         np.save(
-            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad.npy",
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad1.npy",
+            res_F_D_grad,
+        )
+        res_F_D_grad = error_lr.cost_gap_path(
+            theta_D, gap_type="grad"
+        )
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad2.npy",
             res_F_D_grad,
         )
 
@@ -390,12 +404,26 @@ def decentralized_algo(
     plot_figure_path(
         exp_save_path,
         [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad.npy"
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad1.npy"
             for idx, (epoch, bz, lr, cr) in enumerate(params)
         ],
         line_formats,
         legends,
-        f"{exp_save_path}/convergence_{algo}_grad_{exp_name}.pdf",
+        f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf",
+        plot_every,
+        mark_every,
+        plot_first,
+        use_smoother,
+    )
+    plot_figure_path(
+        exp_save_path,
+        [
+            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad2.npy"
+            for idx, (epoch, bz, lr, cr) in enumerate(params)
+        ],
+        line_formats,
+        legends,
+        f"{exp_save_path}/convergence_{algo}_grad2_{exp_name}.pdf",
         plot_every,
         mark_every,
         plot_first,

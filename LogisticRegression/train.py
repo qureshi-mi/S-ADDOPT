@@ -37,7 +37,7 @@ from utilities import (
 from Algos import centralized_algo, decentralized_algo
 
 np.random.seed(0)
-trial_num = 1
+trial_num = 10
 info_log = dict()
 
 for trial_idx in range(trial_num):
@@ -47,6 +47,7 @@ for trial_idx in range(trial_num):
     """
     node_num = 16  ## number of nodes
     # node_num = int(input("Enter number of nodes: "))
+    C_node_num = node_num
 
     # LR_L2: MNIST, LR_L4: CIFAR
     logis_model = LR_L4(
@@ -65,7 +66,7 @@ for trial_idx in range(trial_num):
     )  # initialize the model parameter for central algorithms
     model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
 
-    graph = "grid"  # "grid", "exponential", "geometric", "erdos_renyi", "fully_connected"
+    graph = "ring"  # "ring", "grid", "exponential", "geometric", "erdos_renyi", "fully_connected"
     # f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
     # f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/comm_matrix/comm_matrix_{node_num}.npy"  
     comm_load_path = None
@@ -73,7 +74,7 @@ for trial_idx in range(trial_num):
     communication_rounds = [  # TODO: one shot communication/averaging
         1
     ]  # list of number of communication rounds for decentralized algorithms experiments
-    comm_type = "graph_avg"  # "graph_avg", "all_avg", "no_comm"
+    comm_type = "graph_avg"  # "graph_avg", "all_avg", "one_shot", "no_comm", 
 
     C_algos = ["SGD", "CRR"]  # "SGD", "CRR"
     D_algos = ["DSGD", "DRR"]  # "DSGD", "DRR"
@@ -92,8 +93,9 @@ for trial_idx in range(trial_num):
     C_lr_dec_epochs = [80, 120]
     D_lr_dec_epochs = [80, 120]
 
-    C_batch_size = [10, 20, 30, 40, 50]  # list of batch size for central algorithms experiments
-    D_batch_size = [c_bz * node_num for c_bz in C_batch_size]  # list of batch size for decentralized algorithms experiments
+    bz_list = [15]
+    C_batch_size = [bz*node_num for bz in bz_list]  # list of batch size for central algorithms experiments
+    D_batch_size = [bz for bz in bz_list]  # list of batch size for decentralized algorithms experiments
 
     C_lr_dec = False  # whether to decay the learning rate for central algorithms
     D_lr_dec = False  # whether to decay the learning rate for decentralized algorithms
@@ -127,15 +129,16 @@ for trial_idx in range(trial_num):
         "-|y",
         "-_r",
     ]
-    exp_name = f"match_bz"
-    exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{exp_name}/trial{trial_idx+1}"  # path to save the experiment results
+    dir_name = "multi_trials"
+    exp_name = "exp8_new_DRR_ring"
+    exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{dir_name}/{exp_name}/trial{trial_idx+1}"  # path to save the experiment results
     ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
     opt_name = "nonconvex2"  # "convex", "nonconvex
     # init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
     init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/nonconvex_opt/opt4_opt3_test_F_theta_convergence/exp1/central_SGD/SGD_opt_theta_epoch200_bz10000_lr1.000000.npy"  # path to load the initial model parameter
-    plot_every = 1  # plot every 50 epochs
-    mark_every = 10  # mark every 50 epochs
-    save_every = 25  # save the model parameter every 500 epochs
+    plot_every = 1  # plot points
+    mark_every = 10  # mark interval
+    save_every = int(CEPOCH_base[0] / 10)
     plot_first = -1  # plot the first 1000 epochs
 
     """
@@ -172,6 +175,7 @@ for trial_idx in range(trial_num):
     print(f"trial idx = {trial_idx+1}")
     print(f"{graph} Graph")
     print(f"node num = {node_num}")
+    print(f"c_node_num = {C_node_num}")
     print(f"dim = {dim}")
     print(f"L = {L}")
     print(f"total train sample = {total_train_sample}")
@@ -222,6 +226,7 @@ for trial_idx in range(trial_num):
         exp_names, legends = centralized_algo(
             logis_model,
             model_para_central,
+            C_node_num,
             C_lr,
             C_lr_dec,
             C_lr_list,
@@ -283,7 +288,7 @@ for trial_idx in range(trial_num):
         legend_all.extend(legends)
 
     info_log[f"trial{trial_idx+1}"] = []
-    for item in ["F", "theta", "grad"]:
+    for item in ["F", "theta", "grad1", "grad2"]:
         gap_names = gen_gap_names(exp_name_all, item)
         info_log[f"trial{trial_idx+1}"].append(gap_names)
         plot_figure_path(
@@ -310,7 +315,7 @@ print("\nThe current time in New York is:", currentTimeInNewYork)
 
 # save info log using pickle
 import pickle
-with open(f"{exp_log_path}/info_log.pkl", "wb") as f:
+with open(f"{exp_log_path}/../info_log.pkl", "wb") as f:
     pickle.dump(info_log, f)
 
 # load with pickle
