@@ -41,7 +41,15 @@ def save_npy(npys, root_path, exp_name):
 
 
 def plot_figure_path(
-    exp_save_path, exp_names, formats, legend, save_path, plot_every, mark_every, plot_first, smooth=False
+    exp_save_path,
+    exp_names,
+    formats,
+    legend,
+    save_path,
+    plot_every,
+    mark_every,
+    plot_first,
+    smooth=False,
 ):
     print("plotting the figure...", flush=True)
     plt.clf()
@@ -494,7 +502,9 @@ def init_comm_matrix(node_num, graph, load_path=None):
         elif graph == "erdos_renyi":
             undir_graph = Erdos_Renyi_graph(node_num, 0.1).undirected()
         else:
-            raise ValueError("graph must be exponential, grid, geometric, fully_connected, or erdos_renyi")
+            raise ValueError(
+                "graph must be exponential, grid, geometric, fully_connected, or erdos_renyi"
+            )
 
         if graph in ["exponential", "grid", "geometric", "ring", "fully_connected"]:
             communication_matrix = Weight_matrix(undir_graph).row_stochastic()
@@ -589,6 +599,7 @@ def fix_lambda_transformation(comm_matrix, lambd, max_iterations=2, tolerance=1e
 
     return False, None
 
+
 def model_converged(model, theta, threshold=1e-1, gap_type="theta"):
     """
     This function checks if the gradients have converged
@@ -598,7 +609,7 @@ def model_converged(model, theta, threshold=1e-1, gap_type="theta"):
     """
     if len(theta) < 20:
         return False
-    
+
     tail = theta[-20:]
     if gap_type == "theta":
         diffs = [np.linalg.norm(tail[i] - tail[i + 1]) for i in range(len(tail) - 1)]
@@ -611,33 +622,33 @@ def model_converged(model, theta, threshold=1e-1, gap_type="theta"):
             return True
     else:
         raise ValueError("gap_type must be theta or F")
-    
+
     return False
+
 
 def smoother(x, window_len=11, window="flat"):
     """
     moving average smoothing
     """
-    
+
     if x.ndim != 1:
         raise ValueError("smooth only accepts 1 dimension arrays.")
-    
+
     if x.size < window_len:
         raise ValueError("Input vector needs to be bigger than window size.")
-    
+
     if window_len < 3:
         return x
-    
+
     if window not in ["flat"]:
-        raise ValueError(
-            "Window is on of 'flat'"
-        )
-    
+        raise ValueError("Window is on of 'flat'")
+
     w = np.ones(window_len, "d") / window_len
     y = np.convolve(w, x, mode="valid")
     # TODO: what if distributed algorithms?
-    
+
     return y
+
 
 def gen_gap_names(exp_name_all, gap_type="theta"):
     """
@@ -648,8 +659,9 @@ def gen_gap_names(exp_name_all, gap_type="theta"):
         items = exp_name.split("_")
         items[-1] = f"{gap_type}.npy"
         exp_names.append("_".join(items))
-    
+
     return exp_names
+
 
 def avg_gap(info_log_path, trial_num):
     """
@@ -657,13 +669,16 @@ def avg_gap(info_log_path, trial_num):
     """
     # pickle file
     import pickle
+
     with open(f"{info_log_path}/info_log.pkl", "rb") as f:
         pickle_file = pickle.load(f)
-    
+
     gap_types = ["F", "theta", "grad1", "grad2"]
 
     for type_idx, gap_type in enumerate(gap_types):
-        for exp in pickle_file[f"trial1"][type_idx]:    # exp is the name of the experiment. Different trails have the same exp name
+        for exp in pickle_file[f"trial1"][
+            type_idx
+        ]:  # exp is the name of the experiment. Different trails have the same exp name
             print(f"processing {exp}...", flush=True)
             gaps = []
             for trial in range(trial_num):
@@ -673,13 +688,14 @@ def avg_gap(info_log_path, trial_num):
             exp_name = exp.split("/")[-1]
             np.save(f"{info_log_path}/avg_{exp_name}", avg_gap)
 
-def plot_avg(avg_path, gap_type="theta", lr_list=[1/50, 1/250, 1/1000]):
+
+def plot_avg(avg_path, gap_type="theta", lr_list=[1 / 50, 1 / 250, 1 / 1000]):
     # list files with .npy
     import glob
     import re
     import matplotlib.pyplot as plt
     from matplotlib.font_manager import FontProperties
-    
+
     font = FontProperties()
     font.set_size(18)
     font2 = FontProperties()
@@ -694,6 +710,11 @@ def plot_avg(avg_path, gap_type="theta", lr_list=[1/50, 1/250, 1/1000]):
     legends = []
     for i, file in enumerate(files):
         print(f"plotting {file}...", flush=True)
+        if gap_type == "consensus":
+            if "SGD" in file and "DSGD" not in file:
+                continue
+            if "CRR" in file:
+                continue
         # get legend
         exp_name = file.split("/")[-1]
         items = exp_name.split("_")
@@ -740,9 +761,24 @@ def plot_avg(avg_path, gap_type="theta", lr_list=[1/50, 1/250, 1/1000]):
         print(f"removed {file}")
 
 
+def printTime():
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+
 
 if __name__ == "__main__":
-    avg_gap("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring", 5)
-    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring", "grad1")
-    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring", "grad2")
-    plot_avg("/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring", "theta")
+    avg_gap(
+        "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring",
+        5,
+    )
+    plot_avg(
+        "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring",
+        "grad1",
+    )
+    plot_avg(
+        "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring",
+        "grad2",
+    )
+    plot_avg(
+        "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring",
+        "theta",
+    )

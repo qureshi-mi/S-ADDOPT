@@ -28,16 +28,16 @@ from Optimizers import DOPTIMIZER as dopt
 from utilities import (
     load_state,
     plot_figure_path,
-    convert_to_doubly_stochastic,
     spectral_norm,
     print_matrix,
     init_comm_matrix,
     gen_gap_names,
+    printTime,
 )
 from Algos import centralized_algo, decentralized_algo
 
 np.random.seed(0)
-trial_num = 10
+trial_num = 5
 info_log = dict()
 
 for trial_idx in range(trial_num):
@@ -66,7 +66,7 @@ for trial_idx in range(trial_num):
     )  # initialize the model parameter for central algorithms
     model_para_dis = np.array([cp.deepcopy(model_para_central) for i in range(node_num)])
 
-    graph = "ring"  # "ring", "grid", "exponential", "geometric", "erdos_renyi", "fully_connected"
+    graph = "exponential"  # "ring", "grid", "exponential", "geometric", "erdos_renyi", "fully_connected"
     # f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/gen_graphs/geo/geo_7_node{node_num}.npy"
     # f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/comm_matrix/comm_matrix_{node_num}.npy"  
     comm_load_path = None
@@ -93,7 +93,7 @@ for trial_idx in range(trial_num):
     C_lr_dec_epochs = [80, 120]
     D_lr_dec_epochs = [80, 120]
 
-    bz_list = [15]
+    bz_list = [10, 15, 20, 30]
     C_batch_size = [bz*node_num for bz in bz_list]  # list of batch size for central algorithms experiments
     D_batch_size = [bz for bz in bz_list]  # list of batch size for decentralized algorithms experiments
 
@@ -130,7 +130,7 @@ for trial_idx in range(trial_num):
         "-_r",
     ]
     dir_name = "multi_trials"
-    exp_name = "exp8_new_DRR_ring"
+    exp_name = "exp3_nonconvex_exp"
     exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{dir_name}/{exp_name}/trial{trial_idx+1}"  # path to save the experiment results
     ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
     opt_name = "nonconvex2"  # "convex", "nonconvex
@@ -138,7 +138,7 @@ for trial_idx in range(trial_num):
     init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/nonconvex_opt/opt4_opt3_test_F_theta_convergence/exp1/central_SGD/SGD_opt_theta_epoch200_bz10000_lr1.000000.npy"  # path to load the initial model parameter
     plot_every = 1  # plot points
     mark_every = 10  # mark interval
-    save_every = int(CEPOCH_base[0] / 10)
+    save_every = int(CEPOCH_base[0] / 5) if CEPOCH_base[0] > 5 else 1  # save interval
     plot_first = -1  # plot the first 1000 epochs
 
     """
@@ -252,6 +252,7 @@ for trial_idx in range(trial_num):
         )
         exp_name_all.extend(exp_names)
         legend_all.extend(legends)
+        printTime()
 
     for algo in D_algos:
         exp_names, legends = decentralized_algo(
@@ -286,9 +287,11 @@ for trial_idx in range(trial_num):
         )
         exp_name_all.extend(exp_names)
         legend_all.extend(legends)
+        printTime()
+    print(f"{'-'*50}", flush=True)
 
     info_log[f"trial{trial_idx+1}"] = []
-    for item in ["F", "theta", "grad1", "grad2"]:
+    for item in ["F", "theta", "grad1", "grad2", "consensus"]:
         gap_names = gen_gap_names(exp_name_all, item)
         info_log[f"trial{trial_idx+1}"].append(gap_names)
         plot_figure_path(
