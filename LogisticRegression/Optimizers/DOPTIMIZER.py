@@ -111,6 +111,10 @@ def D_SGD(
                         raise NotImplementedError
                     elif comm_type == "no_comm":
                         pass
+                    elif comm_type == "one_shot":
+                        if k == K - 1 and i == update_round - 1 and node == node_num - 1:
+                            temp = np.matmul(weight, temp)
+                            print("One Shot Communication")
                     else:
                         raise NotImplementedError
 
@@ -214,6 +218,9 @@ def D_RR(
                 learning_rate = lr_list[lr_idx]
                 print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
 
+        # sample_vec = [
+        #         np.random.permutation(prd.data_distr[i]) for i in range(prd.n)
+        #     ] # fix the sample vector for all iteration over the number of nodes
         for node in range(node_num):
             sample_vec = [
                 np.random.permutation(prd.data_distr[i]) for i in range(prd.n)
@@ -243,6 +250,10 @@ def D_RR(
                         raise NotImplementedError
                     elif comm_type == "no_comm":
                         pass
+                    elif comm_type == "one_shot":
+                        if k == K - 1 and round == update_round - 1 and node == node_num - 1:
+                            temp = np.matmul(weight, temp)
+                            print("One Shot Communication")
                     else:
                         raise NotImplementedError
 
