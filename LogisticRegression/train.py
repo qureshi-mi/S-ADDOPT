@@ -76,19 +76,20 @@ for trial_idx in range(trial_num):
     ]  # list of number of communication rounds for decentralized algorithms experiments
     comm_type = "graph_avg"  # "graph_avg", "all_avg", "one_shot", "no_comm", 
 
-    C_algos = ["SGD", "CRR"]  # "SGD", "CRR"
+    C_algos = []  # "SGD", "CRR"
     D_algos = ["DSGD", "DRR"]  # "DSGD", "DRR"
 
     CEPOCH_base = [150 for i in range(5)]  # number of epochs for central algorithms. should have the same length as C_batch_size
     DEPOCH_base = [150 for i in range(5)]  # number of epochs for decentralized algorithms
 
+    # [0.001]
     C_lr = None  # list of learning rate for central algorithms experiments
     D_lr = None  # list of learning rate for decentralized algorithms experiments
 
     # only used for nonconvex case
     # [1 / 50, 1 / 250, 1 / 1000]
     C_lr_list = [1 / 50, 1 / 250, 1 / 1000]  # list of learning rate for central algorithms experiments. should have the same length as C_batch_size
-    D_lr_list = [1 / 50, 1 / 250, 1 / 1000]  # list of learning rate for decentralized algorithms experiments
+    D_lr_list = [1 / 50, 1 / 250, 1 / 1000] # list of learning rate for decentralized algorithms experiments
     # [80, 120]
     C_lr_dec_epochs = [80, 120]
     D_lr_dec_epochs = [80, 120]
@@ -109,11 +110,12 @@ for trial_idx in range(trial_num):
     D_stop_at_converge = False  # whether to stop the training when the model converges for decentralized algorithms
     save_theta_path = False  # whether to save the model parameter training path for central and decentralized algorithms
     grad_track = False  # whether to track the gradient norm for decentralized algorithms
+    exact_diff = True  # exact diffusion
     load_init_theta = (
         False  # whether to load the initial model parameter from pretrained model
     )
     use_smoother = False  # whether to use the smoothing technique for nonconvex case
-    gap_type = "grad"  # "F", "theta", "grad"
+    gap_type = "grad2"  # "F", "theta1", "theta2", "grad1", "grad2", "consensus"
 
     line_formats = [  # list of line formats for plotting
         "-vb",
@@ -130,10 +132,10 @@ for trial_idx in range(trial_num):
         "-_r",
     ]
     dir_name = "multi_trials"
-    exp_name = "exp3_nonconvex_exp"
+    exp_name = "exp9_3_nonconvex_ED_exp"
     exp_log_path = f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/{dir_name}/{exp_name}/trial{trial_idx+1}"  # path to save the experiment results
     ckp_load_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/optimum"  # path to load the optimal model parameter
-    opt_name = "nonconvex2"  # "convex", "nonconvex
+    opt_name = "nonconvex2"  # "convex", "nonconvex2"
     # init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/init_param/CRR_opt_theta_init.npy"  # path to load the initial model parameter
     init_theta_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/nonconvex_opt/opt4_opt3_test_F_theta_convergence/exp1/central_SGD/SGD_opt_theta_epoch200_bz10000_lr1.000000.npy"  # path to load the initial model parameter
     plot_every = 1  # plot points
@@ -202,6 +204,7 @@ for trial_idx in range(trial_num):
     print(f"D stop at converge = {D_stop_at_converge}")
     print(f"save theta path = {save_theta_path}")
     print(f"grad track = {grad_track}")
+    print(f"exact diff = {exact_diff}")
     print(f"load init theta = {load_init_theta}")
     print(f"use_smoother = {use_smoother}")
     print(f"gap type = {gap_type}")
@@ -268,6 +271,7 @@ for trial_idx in range(trial_num):
             communication_rounds,
             comm_type,
             grad_track,
+            exact_diff,
             exp_name,
             exp_log_path,
             save_every,
@@ -291,20 +295,24 @@ for trial_idx in range(trial_num):
     print(f"{'-'*50}", flush=True)
 
     info_log[f"trial{trial_idx+1}"] = []
-    for item in ["F", "theta", "grad1", "grad2", "consensus"]:
+    for item in ["F", "theta1", "theta2", "grad1", "grad2", "consensus"]:
         gap_names = gen_gap_names(exp_name_all, item)
         info_log[f"trial{trial_idx+1}"].append(gap_names)
-        plot_figure_path(
-            exp_log_path,
-            gap_names,
-            line_formats,
-            legend_all,
-            f"{exp_log_path}/cost_gap_all_{exp_name}_{item}.pdf",
-            plot_every,
-            mark_every,
-            plot_first,
-            smooth=use_smoother,
-        )
+        # plot_figure_path(
+        #     exp_log_path,
+        #     gap_names,
+        #     line_formats,
+        #     legend_all,
+        #     f"{exp_log_path}/cost_gap_all_{exp_name}_{item}.pdf",
+        #     plot_every,
+        #     mark_every,
+        #     plot_first,
+        #     smooth=use_smoother,
+        # )
+    import pickle
+    with open(f"{exp_log_path}/info_log.pkl", "wb") as f:
+        pickle.dump(info_log, f)
+    raise NotImplementedError
 
     end = time.time()
     print(f"{'-'*50}")
@@ -317,9 +325,7 @@ currentTimeInNewYork = timeInNewYork.strftime("%H:%M:%S")
 print("\nThe current time in New York is:", currentTimeInNewYork)
 
 # save info log using pickle
-import pickle
-with open(f"{exp_log_path}/../info_log.pkl", "wb") as f:
-    pickle.dump(info_log, f)
+
 
 # load with pickle
 # with open(f"{exp_log_path}/info_log.pkl", "rb") as f:
