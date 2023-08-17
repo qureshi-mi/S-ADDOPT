@@ -164,6 +164,7 @@ def D_RR(
     comm_type="graph_avg",
     lr_list=None,
     lr_dec_epochs=None,
+    exact_diff=False,
 ):
     """
     Distributed DRR Optimizer
@@ -192,11 +193,14 @@ def D_RR(
     start = time.time()
     track_time = start
 
-    grad_track_y = np.zeros(theta_0.shape)
-    grad_prev = np.zeros(theta_0.shape)
-
     for k in range(K):
         temp = theta[-1]
+        if grad_track or exact_diff:
+            grad_track_y = np.zeros(theta_0.shape)
+            grad_prev = np.zeros(theta_0.shape)
+        if exact_diff:
+            theta_prev = cp.deepcopy(temp)
+
         if lr_dec:
             assert lr_staged is False
             learning_rate = 1 / (50*k + 400)
@@ -237,6 +241,14 @@ def D_RR(
                     grad_track_y = np.matmul(weight, grad_track_y + grad - grad_prev)
                     grad_prev = cp.deepcopy(grad)
                     temp = temp - learning_rate * grad_track_y
+                elif exact_diff:
+                    if round == 0:
+                        temp = temp - learning_rate * grad
+                    else:
+                        temp = 2*temp - theta_prev - learning_rate * (grad - grad_prev)
+                    
+                    theta_prev = cp.deepcopy(temp)
+                    grad_prev = cp.deepcopy(grad)
                 else:
                     temp = temp - learning_rate * grad
 
