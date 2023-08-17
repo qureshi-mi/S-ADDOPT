@@ -62,6 +62,8 @@ def plot_figure_path(
     for i, name in enumerate(exp_names):
         print(f"plotting {exp_save_path}/{name}...", flush=True)
         line = np.load(f"{exp_save_path}/{name}")
+        if "consensus" in name:
+            line = line[1:] # remove the first element, since it is zero
         if smooth:
             line = smoother(line, window_len=5)
 
@@ -673,7 +675,7 @@ def avg_gap(info_log_path, trial_num):
     with open(f"{info_log_path}/info_log.pkl", "rb") as f:
         pickle_file = pickle.load(f)
 
-    gap_types = ["F", "theta", "grad1", "grad2"]
+    gap_types = ["F", "theta1", "theta2", "grad1", "grad2", "consensus"]
 
     for type_idx, gap_type in enumerate(gap_types):
         for exp in pickle_file[f"trial1"][
@@ -695,6 +697,10 @@ def plot_avg(avg_path, gap_type="theta", lr_list=[1 / 50, 1 / 250, 1 / 1000]):
     import re
     import matplotlib.pyplot as plt
     from matplotlib.font_manager import FontProperties
+    def custom_sort_key(f):
+        order = {"SGD": 1, "CRR": 2, "DSGD": 3, "DRR": 4}
+        prefix = re.match(r"\D+", f).group()  # Extract the non-numeric prefix
+        return (order.get(prefix, 5))
 
     font = FontProperties()
     font.set_size(18)
@@ -703,17 +709,30 @@ def plot_avg(avg_path, gap_type="theta", lr_list=[1 / 50, 1 / 250, 1 / 1000]):
     plt.figure(3)
 
     files = glob.glob(f"{avg_path}/*.npy")
-    files.sort(key=lambda f: int(re.sub("\D", "", f)))
+    files.sort(key=custom_sort_key)
     gap_files = [file for file in files if gap_type in file]
     files = gap_files
 
+    num_of_algos = 2
+    bzs = []
     legends = []
+    file_set_list = []
+    for i in range(int(len(files) / num_of_algos)):
+        bzs.append([])
+        legends.append([])
+        file_set_list.append([])
+
+    num_of_bzs = len(bzs)
     for i, file in enumerate(files):
-        print(f"plotting {file}...", flush=True)
+        algo_idx = i % num_of_bzs
+        print(f"processing {file} idx {algo_idx}...", flush=True)
+
         if gap_type == "consensus":
             if "SGD" in file and "DSGD" not in file:
+                os.remove(file)
                 continue
             if "CRR" in file:
+                os.remove(file)
                 continue
         # get legend
         exp_name = file.split("/")[-1]
@@ -725,60 +744,122 @@ def plot_avg(avg_path, gap_type="theta", lr_list=[1 / 50, 1 / 250, 1 / 1000]):
             lr = lr_list
         if len(items) == 8:
             cr = items[6][2:]
-            legends.append(f"{algo} (bz={bz}, lr={lr}, cr={cr})")
+            legends[algo_idx].append(f"{algo} (bz={bz}, lr={lr}, cr={cr})")
         else:
-            legends.append(f"{algo} (bz={bz}, lr={lr})")
-        print(f"legend: {legends[-1]}")
+            legends[algo_idx].append(f"{algo} (bz={bz}, lr={lr})")
 
-    plot_figure_path(
-        avg_path,
-        [file.split("/")[-1] for file in files],
-        [
-            "-vb",
-            "-^m",
-            "-dy",
-            "-sr",
-            "-1k",
-            "-2g",
-            "-3r",
-            "-.kp",
-            "-+c",
-            "-xm",
-            "-|y",
-            "-_r",
-        ],
-        legends,
-        f"{avg_path}/avg_{gap_type}.pdf",
-        1,
-        10,
-        -1,
-        smooth=False,
-    )
+        bzs[algo_idx].append(int(bz))
+        file_set_list[algo_idx].append(file)
 
-    # remove the avg files
-    for file in files:
-        os.remove(file)
-        print(f"removed {file}")
+    # plot the figure
+    for i, file_set in enumerate(file_set_list):
+        plot_figure_path(
+            avg_path,
+            [file.split("/")[-1] for file in file_set],
+            [
+                "-vb",
+                "-^m",
+                "-dy",
+                "-sr",
+                "-1k",
+                "-2g",
+                "-3r",
+                "-.kp",
+                "-+c",
+                "-xm",
+                "-|y",
+                "-_r",
+            ],
+            legends[i],
+            f"{avg_path}/avg_{gap_type}_bz{sorted(bzs[i])[0]}.pdf",
+            1,
+            10,
+            -1,
+            smooth=False,
+        )
+
+        # remove the avg files
+        for file in file_set:
+            os.remove(file)
+            print(f"removed {file}")
+        
+        print("--------")
 
 
 def printTime():
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
 
+def remove_files():
+    import shutil
+
+    base_path = "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials"
+    exp_list = [
+        "exp2_nonconvex_grid",
+        "exp3_nonconvex_exp",
+        "exp4_convex_ring",
+        "exp5_convex_grid",
+        "exp6_convex_exp",
+    ]
+    trial_num = 5
+    algo_list = [
+        # "central_SGD", 
+        # "central_CRR", 
+        "DSGD", 
+        "DRR"
+    ]
+
+    for exp_idx, exp_name in enumerate(exp_list):
+        for trial_idx in range(trial_num):
+            for algo_idx, algo in enumerate(algo_list):
+                dir_to_remove = f"{base_path}/{exp_name}/trial{trial_idx+1}/{algo}/training"
+
+                # print(dir_to_remove, " -> ", os.path.isdir(dir_to_remove))
+                if os.path.exists(dir_to_remove) and os.path.isdir(dir_to_remove):
+                    shutil.rmtree(dir_to_remove)
+                    print(f"Directory {dir_to_remove} and its contents removed successfully.")
+                else:
+                    print(f"Directory {dir_to_remove} does not exist.")
+
+
+
 if __name__ == "__main__":
-    avg_gap(
-        "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring",
-        5,
-    )
-    plot_avg(
-        "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring",
-        "grad1",
-    )
-    plot_avg(
-        "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring",
-        "grad2",
-    )
-    plot_avg(
-        "/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/exp8_new_DRR_ring",
-        "theta",
-    )
+    plot_exp_config = [
+        # (2, "exp7_1_nonconvex_GT_ring"),
+        (2, "exp7_2_nonconvex_GT_grid"),
+        (2, "exp7_3_nonconvex_GT_exp"),
+        (2, "exp9_1_nonconvex_ED_ring"),
+        (2, "exp9_2_nonconvex_ED_grid"),
+        (4, "exp9_3_nonconvex_ED_exp"),
+    ]
+
+    for config in plot_exp_config:
+        avg_gap(
+            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
+            config[0],
+        )
+        plot_avg(
+            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
+            "grad1",
+        )
+        plot_avg(
+            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
+            "grad2",
+        )
+        plot_avg(
+            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
+            "theta1",
+        )
+        plot_avg(
+            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
+            "theta2",
+        )
+        plot_avg(
+            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
+            "F",
+        )
+        plot_avg(
+            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
+            "consensus",
+        )
+
