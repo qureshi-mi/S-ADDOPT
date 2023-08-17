@@ -146,7 +146,11 @@ def centralized_algo(
 
         res_F = error_lr.cost_gap_path(theta, gap_type="theta")
         np.save(
-            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy",
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta1.npy",
+            res_F,
+        )
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta2.npy",
             res_F,
         )
         res_F_F = error_lr.cost_gap_path(theta, gap_type="F")
@@ -174,62 +178,66 @@ def centralized_algo(
                 theta,
             )
 
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta.npy"
-            for idx, (epoch, bz, lr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy"
-            for idx, (epoch, bz, lr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad1.npy"
-            for idx, (epoch, bz, lr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_consensus.npy"
-            for idx, (epoch, bz, lr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_consensus_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_theta1_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_theta1.npy"
+                for idx, (epoch, bz, lr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_theta1_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_F.npy"
+                for idx, (epoch, bz, lr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_grad1.npy"
+                for idx, (epoch, bz, lr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_consensus_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_consensus.npy"
+                for idx, (epoch, bz, lr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_consensus_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
 
     exp_names = [f"central_{algo}/{name}" for name in exp_names]
     return exp_names, legends
@@ -248,6 +256,7 @@ def decentralized_algo(
     communication_rounds,
     comm_type,
     grad_track,
+    exact_diff,
     exp_name,
     exp_log_path,
     save_every,
@@ -357,13 +366,20 @@ def decentralized_algo(
                 comm_type=comm_type,
                 lr_list=D_lr_list,
                 lr_dec_epochs=D_lr_dec_epochs,
+                exact_diff=exact_diff,
             )
 
         res_F_D = error_lr.cost_gap_path(theta_D, gap_type="theta")
         np.save(
-            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy",
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta1.npy",
             res_F_D,
         )
+        res_F_D = error_lr.cost_gap_path(np.sum(theta_D, axis=1) / logis_model.n, gap_type="theta")
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta2.npy",
+            res_F_D,
+        )
+
         res_F_D_F = error_lr.cost_gap_path(
             np.sum(theta_D, axis=1) / logis_model.n, gap_type="F"
         )
@@ -399,76 +415,96 @@ def decentralized_algo(
                 theta_D,
             )
 
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta.npy"
-            for idx, (epoch, bz, lr, cr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_theta_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy"
-            for idx, (epoch, bz, lr, cr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad1.npy"
-            for idx, (epoch, bz, lr, cr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad2.npy"
-            for idx, (epoch, bz, lr, cr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_grad2_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
-    plot_figure_path(
-        exp_save_path,
-        [
-            f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_consensus.npy"
-            for idx, (epoch, bz, lr, cr) in enumerate(params)
-        ],
-        line_formats,
-        legends,
-        f"{exp_save_path}/convergence_{algo}_consensus_{exp_name}.pdf",
-        plot_every,
-        mark_every,
-        plot_first,
-        use_smoother,
-    )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_theta1_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta1.npy"
+                for idx, (epoch, bz, lr, cr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_theta1_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_theta2_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_theta2.npy"
+                for idx, (epoch, bz, lr, cr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_theta2_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_F.npy"
+                for idx, (epoch, bz, lr, cr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_F_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad1.npy"
+                for idx, (epoch, bz, lr, cr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_grad1_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_grad2_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_grad2.npy"
+                for idx, (epoch, bz, lr, cr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_grad2_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
+    if not os.path.exists(f"{exp_save_path}/convergence_{algo}_consensus_{exp_name}.pdf"):
+        plot_figure_path(
+            exp_save_path,
+            [
+                f"{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_consensus.npy"
+                for idx, (epoch, bz, lr, cr) in enumerate(params)
+            ],
+            line_formats,
+            legends,
+            f"{exp_save_path}/convergence_{algo}_consensus_{exp_name}.pdf",
+            plot_every,
+            mark_every,
+            plot_first,
+            use_smoother,
+        )
 
     exp_names = [f"{algo}/{name}" for name in exp_names]
     return exp_names, legends
