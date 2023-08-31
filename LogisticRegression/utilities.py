@@ -695,7 +695,6 @@ def plot_avg(avg_path, gap_type="theta", lr_list=[1 / 50, 1 / 250, 1 / 1000]):
     # list files with .npy
     import glob
     import re
-    import matplotlib.pyplot as plt
     from matplotlib.font_manager import FontProperties
     def custom_sort_key(f):
         order = {"SGD": 1, "CRR": 2, "DSGD": 3, "DRR": 4}
@@ -821,45 +820,111 @@ def remove_files():
                 else:
                     print(f"Directory {dir_to_remove} does not exist.")
 
+def plot_by_config(
+    node_num, epoch, bz, lr, lr_list, cr, gap_type, GT_path, base_path, save_path,
+    plot_every=1, mark_every=10, plot_first=-1,
+):
+    # list trials in directory
+    import glob
+    files = glob.glob(f"{base_path}/trial*")
+    trial_num = len(files)
+    algo_list = [
+        "central_SGD", 
+        "central_CRR", 
+        "DSGD", 
+        "DRR",
+        #"GTRR",
+    ]
+    algo_abbrev = ["SGD", "CRR", "DSGD", "DRR", ] # "GTRR"
+    gap_type_dict = {
+        "nonconvex": ["grad1", "grad2", "consensus"],
+        "convex": ["theta1", "theta2", "consensus"],
+    }
+    formats = [  # list of line formats for plotting
+        "-vb",
+        "-^m",
+        "-dy",
+        "-sr",
+        "-1k",
+        "-2g",
+        "-3r",
+        "-.kp",
+        "-+c",
+        "-xm",
+        "-|y",
+        "-_r",
+    ]
+    legends = []
+
+    print("plotting the figure...", flush=True)
+    plt.clf()
+    font = FontProperties()
+    font.set_size(18)
+    font2 = FontProperties()
+    font2.set_size(10)
+    plt.figure(3)
+
+    for algo_idx, algo in enumerate(algo_list):
+        gap_list = []
+        if algo in ["central_SGD", "central_CRR"]:
+            legends.append(f"{algo} (bz={bz*node_num}, lr={lr_list})")
+            exp_name = f"{algo_abbrev[algo_idx]}_gap_epoch{epoch}_bz{bz*node_num}_lr{lr:.6f}_{gap_type}"
+        elif algo in ["DSGD", "DRR", "GTRR"]:
+            legends.append(f"{algo} (bz={bz}, lr={lr_list}, cr={cr})")
+            exp_name = f"{algo_abbrev[algo_idx]}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_{gap_type}"
+
+        for trial_idx in range(trial_num):
+            load_path = f"{base_path}/trial{trial_idx+1}/{algo}/{exp_name}.npy"
+            if algo == "GTRR":
+                load_path = f"{GT_path}/trial{trial_idx+1}/DRR/DRR_{exp_name[5:]}.npy"
+            gap_list.append(np.load(load_path))
+
+        avg_gap = np.mean(gap_list, axis=0)
+        if gap_type == "consensus":
+            avg_gap = avg_gap[1:]
+        xaxis = np.linspace(0, len(avg_gap) - 1, num=len(avg_gap), dtype=int)
+        yaxis = [abs(point) for point in avg_gap]  # the F_val could be negative
+
+        if plot_first == -1:
+            plot_first = len(avg_gap)
+        plt.plot(
+            xaxis[:plot_first:plot_every], yaxis, formats[algo_idx], markevery=mark_every
+        )
+
+    plt.legend(legends, prop=font2)
+    plt.grid(True)
+    plt.yscale("log")
+    plt.yticks([1e-1, 1e-3, 1e-5, 1e-7, 1e-9, 1e-11])
+    plt.tick_params(labelsize="large", width=3)
+    plt.title("CIFAR10", fontproperties=font)
+    plt.xlabel("Epochs", fontproperties=font)
+    plt.ylabel(f"Optimality Gap ({gap_type})", fontproperties=font)
+    plt.savefig(save_path, format="pdf", dpi=4000, bbox_inches="tight")
+    print("figure plotted...")
 
 
 if __name__ == "__main__":
-    plot_exp_config = [
-        # (2, "exp7_1_nonconvex_GT_ring"),
-        (2, "exp7_2_nonconvex_GT_grid"),
-        (2, "exp7_3_nonconvex_GT_exp"),
-        (2, "exp9_1_nonconvex_ED_ring"),
-        (2, "exp9_2_nonconvex_ED_grid"),
-        (4, "exp9_3_nonconvex_ED_exp"),
+    gap_type_list = [
+        # ("grad1", "grad1_pre_avg"),
+        # ("grad2", "grad2_post_avg"),
+        ("theta1", "theta1_post_avg"),
+        ("theta2", "theta2_pre_avg"),
+        ("consensus", "consensus"),
     ]
 
-    for config in plot_exp_config:
-        avg_gap(
-            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
-            config[0],
-        )
-        plot_avg(
-            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
-            "grad1",
-        )
-        plot_avg(
-            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
-            "grad2",
-        )
-        plot_avg(
-            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
-            "theta1",
-        )
-        plot_avg(
-            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
-            "theta2",
-        )
-        plot_avg(
-            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
-            "F",
-        )
-        plot_avg(
-            f"/afs/andrew.cmu.edu/usr7/jiaruil3/private/DRR/experiments/multi_trials/{config[1]}",
-            "consensus",
-        )
+    for gap_type, save_name in gap_type_list:
+        for bz in [10]:
+            for cr in [1, 5, 10, 25, 125, -2, -5]:
+                plot_by_config(
+                    node_num=16,
+                    epoch=150,
+                    bz=bz,
+                    lr=0.001000,
+                    lr_list=0.001000,
+                    cr=cr,
+                    gap_type=gap_type,
+                    GT_path=None,
+                    base_path="/Users/ultrali/Documents/Grad/research/gauri/230817_all_res/cr_exps/exp11_1_convex_cr_ring",
+                    save_path=f"/Users/ultrali/Documents/Grad/research/gauri/230817_all_res/cr_exps/exp11_1_convex_cr_ring/plots/{save_name}_bz{bz}_cr{cr}.pdf",
+                )
 
