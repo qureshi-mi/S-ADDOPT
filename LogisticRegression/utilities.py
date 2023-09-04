@@ -822,7 +822,8 @@ def remove_files():
 
 def plot_by_config(
     node_num, epoch, bz, lr, lr_list, cr, gap_type, GT_path, base_path, save_path,
-    plot_every=1, mark_every=10, plot_first=-1,
+    plot_every=1, mark_every=10, plot_first=-1, skip_algos=[], prev_legends=None,
+    format_offset=0,
 ):
     # list trials in directory
     import glob
@@ -857,20 +858,26 @@ def plot_by_config(
     legends = []
 
     print("plotting the figure...", flush=True)
-    plt.clf()
+    # plt.clf()
     font = FontProperties()
     font.set_size(18)
     font2 = FontProperties()
     font2.set_size(10)
+    plt.rc('text', usetex=True)
     plt.figure(3)
 
     for algo_idx, algo in enumerate(algo_list):
+        if algo in skip_algos:
+            continue
+
         gap_list = []
         if algo in ["central_SGD", "central_CRR"]:
-            legends.append(f"{algo} (bz={bz*node_num}, lr={lr_list})")
+            legends.append(f"{algo[-3:]}")
+            # legends.append(f"{algo} (bz={bz*node_num}, lr={lr_list})")
             exp_name = f"{algo_abbrev[algo_idx]}_gap_epoch{epoch}_bz{bz*node_num}_lr{lr:.6f}_{gap_type}"
         elif algo in ["DSGD", "DRR", "GTRR"]:
-            legends.append(f"{algo} (bz={bz}, lr={lr_list}, cr={cr})")
+            legends.append(f"{algo} (cr={cr})")
+            # legends.append(f"{algo} (bz={bz}, lr={lr_list}, cr={cr})")
             exp_name = f"{algo_abbrev[algo_idx]}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_{gap_type}"
 
         for trial_idx in range(trial_num):
@@ -888,8 +895,16 @@ def plot_by_config(
         if plot_first == -1:
             plot_first = len(avg_gap)
         plt.plot(
-            xaxis[:plot_first:plot_every], yaxis, formats[algo_idx], markevery=mark_every
+            xaxis[:plot_first:plot_every], 
+            yaxis, 
+            # formats[algo_idx+format_offset], 
+            markevery=mark_every
         )
+
+    if prev_legends is not None:
+        prev_legends.extend(legends)
+        legends = prev_legends
+        print("legends: ", legends)
 
     plt.legend(legends, prop=font2)
     plt.grid(True)
@@ -898,9 +913,11 @@ def plot_by_config(
     plt.tick_params(labelsize="large", width=3)
     plt.title("CIFAR10", fontproperties=font)
     plt.xlabel("Epochs", fontproperties=font)
-    plt.ylabel(f"Optimality Gap ({gap_type})", fontproperties=font)
+    plt.ylabel(r'$\frac{1}{n} \Sigma_{i=1}^n ||x_{i,t}^0 - x^*||^2$', fontproperties=font)
     plt.savefig(save_path, format="pdf", dpi=4000, bbox_inches="tight")
     print("figure plotted...")
+
+    return legends
 
 
 if __name__ == "__main__":
@@ -908,14 +925,19 @@ if __name__ == "__main__":
         # ("grad1", "grad1_pre_avg"),
         # ("grad2", "grad2_post_avg"),
         ("theta1", "theta1_post_avg"),
-        ("theta2", "theta2_pre_avg"),
-        ("consensus", "consensus"),
+        # ("theta2", "theta2_pre_avg"),
+        # ("consensus", "consensus"),
     ]
 
+    legends = None
     for gap_type, save_name in gap_type_list:
         for bz in [10]:
-            for cr in [1, 5, 10, 25, 125, -2, -5]:
-                plot_by_config(
+            for cr in [1, -5,  5, 10]:
+                skip_algos = []
+                if cr != 1:
+                    skip_algos.extend(["central_SGD", "central_CRR", "DSGD"])
+
+                legends = plot_by_config(
                     node_num=16,
                     epoch=150,
                     bz=bz,
@@ -924,7 +946,10 @@ if __name__ == "__main__":
                     cr=cr,
                     gap_type=gap_type,
                     GT_path=None,
-                    base_path="/Users/ultrali/Documents/Grad/research/gauri/230817_all_res/cr_exps/exp11_1_convex_cr_ring",
-                    save_path=f"/Users/ultrali/Documents/Grad/research/gauri/230817_all_res/cr_exps/exp11_1_convex_cr_ring/plots/{save_name}_bz{bz}_cr{cr}.pdf",
+                    base_path="/Users/ultrali/Documents/Grad/research/gauri/230817_all_res/cr_exps/exp11_3_convex_cr_exp",
+                    save_path=f"/Users/ultrali/Documents/Grad/research/gauri/230817_all_res/cr_exps/plots/{save_name}_bz{bz}_cr{cr}_exp.pdf",
+                    skip_algos=skip_algos,
+                    prev_legends=legends,
+                    format_offset=len(legends) if legends is not None else 0,
                 )
 
