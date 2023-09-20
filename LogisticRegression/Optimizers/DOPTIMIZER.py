@@ -8,7 +8,13 @@ import utilities as ut
 from numpy import linalg as LA
 import time
 import math
-from utilities import save_npy, save_state, load_state, plot_figure_data, model_converged
+from utilities import (
+    save_npy,
+    save_state,
+    load_state,
+    plot_figure_data,
+    model_converged,
+)
 from analysis import error
 
 
@@ -66,8 +72,8 @@ def D_SGD(
         temp = theta[-1]
         if lr_dec:
             assert lr_staged is False
-            learning_rate = 1 / (50*k + 400)
-        
+            learning_rate = 1 / (50 * k + 400)
+
         if lr_dec_epochs is None:
             if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
                 assert lr_list is not None
@@ -83,7 +89,9 @@ def D_SGD(
                 assert lr_dec is False
                 lr_idx = lr_dec_epochs.index(k) + 1
                 learning_rate = lr_list[lr_idx]
-                print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
+                print(
+                    f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease"
+                )
 
         for node in range(node_num):
             for i in range(update_round):
@@ -100,7 +108,6 @@ def D_SGD(
                 else:
                     temp = temp - learning_rate * grad
 
-
                 if comm_round > 0:
                     if (i + 1) % comm_round == 0:
                         # averaging from neighbours
@@ -114,7 +121,11 @@ def D_SGD(
                         elif comm_type == "no_comm":
                             pass
                         elif comm_type == "one_shot":
-                            if k == K - 1 and i == update_round - 1 and node == node_num - 1:
+                            if (
+                                k == K - 1
+                                and i == update_round - 1
+                                and node == node_num - 1
+                            ):
                                 temp = np.matmul(weight, temp)
                                 print("One Shot Communication")
                         else:
@@ -210,8 +221,8 @@ def D_RR(
 
         if lr_dec:
             assert lr_staged is False
-            learning_rate = 1 / (50*k + 400)
-        
+            learning_rate = 1 / (50 * k + 400)
+
         if lr_dec_epochs is None:
             if lr_staged and lr_idx < len(lr_list) - 1 and k - lr_change_round > 20:
                 assert lr_list is not None
@@ -227,7 +238,9 @@ def D_RR(
                 assert lr_dec is False
                 lr_idx = lr_dec_epochs.index(k) + 1
                 learning_rate = lr_list[lr_idx]
-                print(f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease")
+                print(
+                    f"Learning Rate Decreased to {learning_rate} at {k} round - {lr_idx}th decrease"
+                )
 
         # sample_vec = [
         #         np.random.permutation(prd.data_distr[i]) for i in range(prd.n)
@@ -252,12 +265,14 @@ def D_RR(
                     if round == 0:
                         temp = temp - learning_rate * grad
                     else:
-                        temp = 2*temp - theta_prev - learning_rate * (grad - grad_prev)
+                        temp = (
+                            2 * temp - theta_prev - learning_rate * (grad - grad_prev)
+                        )
                     if np.any(np.isnan(temp)):
                         print(f"epoch {k} | node {node} | round {round} | theta {temp}")
                         print(f"nan at {k} round")
                         raise ValueError
-                    
+
                     theta_prev = cp.deepcopy(temp)
                     grad_prev = cp.deepcopy(grad)
                 else:
@@ -275,7 +290,11 @@ def D_RR(
                         elif comm_type == "no_comm":
                             pass
                         elif comm_type == "one_shot":
-                            if k == K - 1 and round == update_round - 1 and node == node_num - 1:
+                            if (
+                                k == K - 1
+                                and round == update_round - 1
+                                and node == node_num - 1
+                            ):
                                 temp = np.matmul(weight, temp)
                                 print("One Shot Communication")
                         else:
