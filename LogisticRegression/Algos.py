@@ -139,6 +139,12 @@ def centralized_algo(
                 node_num=node_num,
             )
 
+        F_loss = logis_model.F_val(np.array(theta))
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_loss.npy",
+            F_loss,
+        )
+
         np.save(
             f"{exp_save_path}/{algo}_opt_theta_epoch{epoch}_bz{bz}_lr{lr:.6f}.npy",
             theta_opt,
@@ -374,6 +380,12 @@ def decentralized_algo(
                 lr_dec_epochs=D_lr_dec_epochs,
                 exact_diff=exact_diff,
             )
+
+        F_loss = logis_model.F_val(np.array(theta_D))
+        np.save(
+            f"{exp_save_path}/{algo}_gap_epoch{epoch}_bz{bz}_lr{lr:.6f}_ur{cr}_loss.npy",
+            F_loss,
+        )
 
         res_F_D = error_lr.cost_gap_path(theta_D, gap_type="theta")
         np.save(
