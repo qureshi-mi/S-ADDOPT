@@ -183,6 +183,7 @@ def D_RR(
     lr_list=None,
     lr_dec_epochs=None,
     exact_diff=False,
+    comm_every_epoch=False,
 ):
     """
     Distributed DRR Optimizer
@@ -278,38 +279,49 @@ def D_RR(
                 else:
                     temp = temp - learning_rate * grad
 
-                if comm_round > 0:
-                    if (round + 1) % comm_round == 0:
-                        # averaging from neighbours
-                        if comm_type == "graph_avg":
-                            temp = np.matmul(weight, temp)
-                        elif comm_type == "all_avg":
-                            theta_avg = np.sum(temp, axis=0) / node_num
-                            temp = np.array([theta_avg for i in range(node_num)])
-                            raise NotImplementedError
-                        elif comm_type == "no_comm":
-                            pass
-                        elif comm_type == "one_shot":
-                            if (
-                                k == K - 1
-                                and round == update_round - 1
-                                and node == node_num - 1
-                            ):
+                if not comm_every_epoch:
+                    if comm_round > 0:
+                        if (round + 1) % comm_round == 0:
+                            # averaging from neighbours
+                            if comm_type == "graph_avg":
                                 temp = np.matmul(weight, temp)
-                                print("One Shot Communication")
-                        else:
-                            raise NotImplementedError
-                elif comm_round < 0:
-                    for i in range(-comm_round):
-                        temp = np.matmul(weight, temp)
-                else:
-                    raise ValueError
+                            elif comm_type == "all_avg":
+                                theta_avg = np.sum(temp, axis=0) / node_num
+                                temp = np.array([theta_avg for i in range(node_num)])
+                                raise NotImplementedError
+                            elif comm_type == "no_comm":
+                                pass
+                            elif comm_type == "one_shot":
+                                if (
+                                    k == K - 1
+                                    and round == update_round - 1
+                                    and node == node_num - 1
+                                ):
+                                    temp = np.matmul(weight, temp)
+                                    print("One Shot Communication")
+                            else:
+                                raise NotImplementedError
+                    elif comm_round < 0:
+                        for i in range(-comm_round):
+                            temp = np.matmul(weight, temp)
+                    else:
+                        raise ValueError
 
                 if stop_at_converge:
                     cost_path = error_lr_0.cost_gap_path(temp, gap_type="theta")
                     if cost_path[-1] < 1e-1:
                         print(f"Converged at {k} round")
                         return theta, theta[-1], prd.F_val(theta[-1])
+            
+        if comm_every_epoch:
+            if comm_round > 0:
+                if comm_type == "graph_avg":
+                    temp = np.matmul(weight, temp)
+                else:
+                    raise ValueError
+            elif comm_round < 0:
+                for i in range(-comm_round):
+                    temp = np.matmul(weight, temp)
 
         ut.monitor("D_RR", k, K, track_time)
         theta.append(cp.deepcopy(temp))

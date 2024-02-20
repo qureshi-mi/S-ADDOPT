@@ -281,6 +281,7 @@ def decentralized_algo(
     algo,
     gap_type,
     use_smoother,
+    comm_every_epoch,
 ):
     exp_save_path = f"{exp_log_path}/{algo}"
     initDir(exp_save_path)
@@ -379,6 +380,7 @@ def decentralized_algo(
                 lr_list=D_lr_list,
                 lr_dec_epochs=D_lr_dec_epochs,
                 exact_diff=exact_diff,
+                comm_every_epoch=comm_every_epoch,
             )
 
         F_loss = logis_model.F_val(np.array(theta_D))
